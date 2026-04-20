@@ -829,16 +829,14 @@
                 return new Promise(r => setTimeout(() => r(true), 500)); 
             }
             try {
-                // GUNA MODE 'no-cors' UNTUK BYPASS CORS SECARA MUTLAK (API AKAN TERIMA TAPI RESPON DIABAIKAN)
-                await fetch(GAS_WEB_APP_URL, {
+                // TIADA custom headers, TIADA mode no-cors
+                // Pelayar web akan menghantar secara default sebagai "text/plain" (Simple Request)
+                const res = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                    },
                     body: JSON.stringify({ action: 'update', rowIdx, status, date, editor, unit })
                 });
-                return true; // Anggap berjaya kerana no-cors tidak memulangkan payload yang boleh dibaca
+                const data = await res.json();
+                return data.status === 'success';
             } catch(e) { return false; }
         }
 
@@ -895,45 +893,38 @@
                     loader.style.opacity = '0';
                     setTimeout(() => loader.style.display = 'none', 500);
                 } else {
-                    // GUNA MODE 'no-cors' UNTUK BYPASS CORS GITHUB PAGES
-                    await fetch(GAS_WEB_APP_URL, {
+                    // TIADA custom headers, TIADA mode no-cors
+                    // Pelayar web akan menghantar secara default sebagai "text/plain" (Simple Request)
+                    const res = await fetch(GAS_WEB_APP_URL, {
                         method: 'POST',
-                        mode: 'no-cors',
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8'
-                        },
                         body: JSON.stringify({ action: 'import_drive' })
                     });
                     
-                    // Memandangkan respons 'no-cors' tak boleh dibaca, kita tunggu 5 saat 
-                    // dan panggil semula GET request (kerana GET tiada isu CORS) untuk kemaskini jadual
-                    setTimeout(async () => {
-                        try {
-                            const response = await fetch(GAS_WEB_APP_URL);
-                            const resJson = await response.json();
-                            if(resJson.status === 'success') {
-                                tableData = resJson.data.map(r => {
-                                    r.Editor = normalizeEditorName(r.Editor);
-                                    r.Status = normalizeStatus(r.Status);
-                                    r.Unit = normalizeUnit(r.Unit);
-                                    return r;
-                                });
-                                if(activeUnit) applyFilters(); 
-                                else showDashboard();
-                                showToast("Import process executed. Data refreshed.", "success");
-                            }
-                        } catch(err) {
-                            showToast("Refresh failed after import.", "error");
-                        } finally {
-                            loader.style.opacity = '0';
-                            setTimeout(() => loader.style.display = 'none', 500);
+                    const data = await res.json();
+                    
+                    if(data.status === 'success') {
+                        showToast(data.message, "success");
+                        const response = await fetch(GAS_WEB_APP_URL);
+                        const resJson = await response.json();
+                        if(resJson.status === 'success') {
+                            tableData = resJson.data.map(r => {
+                                r.Editor = normalizeEditorName(r.Editor);
+                                r.Status = normalizeStatus(r.Status);
+                                r.Unit = normalizeUnit(r.Unit);
+                                return r;
+                            });
+                            if(activeUnit) applyFilters(); 
+                            else showDashboard();
                         }
-                    }, 5000); // Masa menunggu 5 saat sebelum jadual ditarik semula
+                    } else {
+                        showToast(data.message, "error");
+                    }
                 }
             } catch(e) {
+                showToast("System error: " + e.message, "error");
+            } finally {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
-                showToast("System error: " + e.message, "error");
             }
         });
 
