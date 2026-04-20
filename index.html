@@ -829,9 +829,13 @@
                 return new Promise(r => setTimeout(() => r(true), 500)); 
             }
             try {
-                // TIADA HEADERS UNTUK MENGELAKKAN CORS PREFLIGHT BLOCK DI GITHUB PAGES
+                // GUNA TEXT/PLAIN DAN REDIRECT: FOLLOW UNTUK BYPASS CORS DI GITHUB PAGES
                 const res = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
+                    redirect: 'follow',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
                     body: JSON.stringify({ action: 'update', rowIdx, status, date, editor, unit })
                 });
                 const data = await res.json();
@@ -890,9 +894,13 @@
                     await new Promise(r => setTimeout(r, 1500));
                     showToast("Import Simulation Successful.", "success");
                 } else {
-                    // TIADA HEADERS UNTUK MENGELAKKAN CORS PREFLIGHT BLOCK DI GITHUB PAGES
+                    // GUNA TEXT/PLAIN DAN REDIRECT: FOLLOW UNTUK BYPASS CORS DI GITHUB PAGES
                     const res = await fetch(GAS_WEB_APP_URL, {
                         method: 'POST',
+                        redirect: 'follow',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8'
+                        },
                         body: JSON.stringify({ action: 'import_drive' })
                     });
                     const data = await res.json();
