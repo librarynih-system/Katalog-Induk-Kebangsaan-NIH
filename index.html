@@ -452,11 +452,20 @@
         let dynamicEditors = [];
         
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
+        
+        // SENARAI 10 NAMA RASMI SAHAJA (DITAMBAH DENGAN SISTEM & LIBRARY ADMIN)
         const listEditors = [
-            "Sistem", "Library admin", "NORHAYATI BT MAJID", "MAZIDAH BINTI ABD. RAHMAN", 
-            "NURFATIHAH BT S BAHARUDDIN", "NOR FAZILAH BT ABDULLAH ZAWAWI", "WAN AZURA BT WAN AHMAD MUJI", 
-            "NOOR SAKINAH BT IBARAHIM", "ANDRIA GANA ANAK GIRI", "NOOREYZAN BT MANANGIN", 
-            "SHAFIQ BIN S. BAHARUDDIN", "MAIZAITUL HUSNA BT ABDUL HALIM"
+            "Sistem", "Library admin", 
+            "MAZIDAH ABD. RAHMAN", 
+            "NORHAYATI MAJID", 
+            "NURFATIHAH S BAHARUDDIN", 
+            "NOR FAZILAH ABDULLAH ZAWAWI", 
+            "WAN AZURA WAN AHMAD MUJI", 
+            "NOOR SAKINAH IBARAHIM", 
+            "ANDRIA GANA ANAK GIRI", 
+            "NOOREYZAN MANANGIN", 
+            "SHAFIQ S. BAHARUDDIN", 
+            "MAIZAITUL HUSNA ABDUL HALIM"
         ];
         
         const DOM = {
@@ -476,30 +485,27 @@
 
         lucide.createIcons();
 
+        // FUNGSI INI AKAN MEMASTIKAN SEMUA VARIASI EJAAN DALAM GOOGLE SHEET
+        // DITUKAR MENJADI 10 NAMA RASMI DI ATAS SAHAJA KETIKA DIPAPARKAN
         function normalizeEditorName(rawName) {
             if (!rawName) return 'Sistem';
-            let ed = rawName.toString().trim();
-            if (!ed) return 'Sistem';
+            let ed = rawName.toString().trim().toUpperCase();
             
-            let edClean = ed.replace(/\s+/g, ' '); 
-            let edNoSpace = edClean.toLowerCase().replace(/[^a-z0-9]/g, ''); 
+            if (ed === '' || ed === 'SISTEM' || ed === 'AUTO IMPORT') return 'Sistem';
+            if (ed === 'LIBRARY ADMIN') return 'Library admin';
 
-            if (edNoSpace === 'sistem' || edNoSpace === '') return 'Sistem';
-            if (edNoSpace === 'libraryadmin') return 'Library admin';
-            if (edNoSpace === 'autoimport') return 'Auto Import';
+            if (ed.includes('MAZIDAH')) return 'MAZIDAH ABD. RAHMAN';
+            if (ed.includes('NORHAYATI')) return 'NORHAYATI MAJID';
+            if (ed.includes('NURFATIHAH')) return 'NURFATIHAH S BAHARUDDIN';
+            if (ed.includes('FAZILAH')) return 'NOR FAZILAH ABDULLAH ZAWAWI';
+            if (ed.includes('AZURA')) return 'WAN AZURA WAN AHMAD MUJI';
+            if (ed.includes('SAKINAH')) return 'NOOR SAKINAH IBARAHIM';
+            if (ed.includes('ANDRIA')) return 'ANDRIA GANA ANAK GIRI';
+            if (ed.includes('NOOREYZAN')) return 'NOOREYZAN MANANGIN';
+            if (ed.includes('SHAFIQ')) return 'SHAFIQ S. BAHARUDDIN';
+            if (ed.includes('MAIZAITUL')) return 'MAIZAITUL HUSNA ABDUL HALIM';
 
-            let found = listEditors.find(e => e.toLowerCase().replace(/[^a-z0-9]/g, '') === edNoSpace);
-            if (found) return found;
-
-            let validStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
-            
-            found = validStaff.find(e => e.toLowerCase().replace(/[^a-z0-9]/g, '').includes(edNoSpace) && edNoSpace.length > 3);
-            if (found) return found;
-            
-            found = validStaff.find(e => edNoSpace.includes(e.toLowerCase().replace(/[^a-z0-9]/g, '')) && e.length > 3);
-            if (found) return found;
-
-            return edClean.toUpperCase(); 
+            return ed; 
         }
 
         function isCompleteStatus(rawStatus) {
@@ -587,17 +593,13 @@
             const complete = validData.filter(r => r.Status === 'Complete').length;
             const pending = total - complete;
             
-            // Memastikan SEMUA staf dari list asal (listEditors) dikira, ditambah dengan editor dari data
+            // KPI HANYA MENGIRA 10 STAF RASMI SAHAJA 
             const predefinedStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
-            const activeEditors = new Set([
-                ...predefinedStaff,
-                ...validData.map(r => r.Editor).filter(e => e && e !== 'Sistem' && e !== 'Library admin' && e !== 'Auto Import')
-            ]);
-
+            
             document.getElementById('kpi-total').textContent = total.toLocaleString();
             document.getElementById('kpi-complete').textContent = complete.toLocaleString();
             document.getElementById('kpi-pending').textContent = pending.toLocaleString();
-            document.getElementById('kpi-editors').textContent = activeEditors.size.toLocaleString();
+            document.getElementById('kpi-editors').textContent = predefinedStaff.length.toLocaleString(); // Sepatutnya 10
             document.getElementById('total-loaded').textContent = tableData.length.toLocaleString();
         }
 
@@ -626,13 +628,9 @@
         }
 
         function populateFilters() {
-            // Gabungkan staf sedia ada dengan mana-mana staf dalam data supaya nama baru sentiasa muncul
-            const predefinedStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
-            const foundEditors = new Set([
-                ...predefinedStaff,
-                ...tableData.map(r => r.Editor).filter(e => e && e !== 'Sistem' && e !== 'Library admin')
-            ]);
-            dynamicEditors = Array.from(foundEditors).sort();
+            // HANYA GUNAKAN 10 NAMA RASMI TANPA MENGAMBIL SECARA RAWAK DARI TABLE DATA
+            const validStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
+            dynamicEditors = validStaff; 
 
             DOM.filterEditor.innerHTML = '<option value="All">All Editors</option>';
             dynamicEditors.forEach(ed => {
