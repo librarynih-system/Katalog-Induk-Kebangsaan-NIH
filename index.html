@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KATALOG INDUK KEBANGSAAN NIH (KIK) - Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- TAMBAHAN: SheetJS dengan sokongan Style (xlsx-js-style) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    },
+                    colors: {
+                        navy: '#0f172a',    
+                        lightgrey: '#f8fafc', 
+                        bordergrey: '#e2e8f0' 
+                        /* Nota: Kod "blue" dibuang dari sini supaya ia tidak merosakkan warna default blue Tailwind */
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        body { background-color: #f8fafc; }
+        .table-row { transition: background-color 0.15s ease; }
+        
+        .data-select, .status-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+        .status-pending { color: #b91c1c; background-color: #fef2f2; border-color: #fecaca; }
+        .status-complete { color: #047857; background-color: #ecfdf5; border-color: #a7f3d0; }
+
+        .marc-tag {
+            display: inline-block;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border: 1px solid #bfdbfe;
+        }
+
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-active { transform: translateY(0); opacity: 1; }
+        
+        .folder-icon { fill: currentColor; fill-opacity: 0.2; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col bg-blue-50 relative selection:bg-blue-200 selection:text-blue-900">
+
+    <!-- Latar Belakang Dekoratif -->
+    <div class="fixed top-0 inset-x-0 h-[500px] bg-gradient-to-b from-blue-200/50 via-blue-50/80 to-transparent pointer-events-none -z-10"></div>
+
+    <!-- Skrin Muat Turun (Full Screen Loader) -->
+    <div id="app-loader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[200] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="bg-white/95 backdrop-blur-xl p-10 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full transform transition-all border border-white/50">
+            <div class="relative w-16 h-16 mb-6">
+                <div class="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i data-lucide="database" class="w-6 h-6 text-blue-600"></i>
+                </div>
+            </div>
+            <h3 class="text-2xl font-black text-navy text-center mb-2 tracking-tight">Synchronizing Data</h3>
+            <p class="text-sm text-slate-500 text-center font-medium leading-relaxed">Please wait a moment, the system is processing and filtering your KIK records...</p>
+        </div>
+    </div>
+
+    <!-- HEADER KEKAL -->
+    <header class="bg-blue-100/90 backdrop-blur-xl border-b border-blue-200 sticky top-0 z-30 shadow-sm transition-all">
+        <div class="px-8 py-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-navy tracking-tight flex items-center gap-2.5">
+                    <div class="bg-white p-2 rounded-lg shadow-sm border border-blue-50">
+                        <i data-lucide="book-open" class="text-blue-600 w-6 h-6"></i>
+                    </div>
+                    KATALOG INDUK KEBANGSAAN NIH
+                </h1>
+                <h2 class="text-[13px] font-bold text-slate-500 mt-1 uppercase tracking-widest ml-11">Enterprise Correction Dashboard</h2>
+            </div>
+            
+            <div class="flex items-center gap-8 text-sm">
+                <div class="flex flex-col text-right">
+                    <span class="text-slate-400 text-xs font-semibold uppercase">Current Time</span>
+                    <span id="last-updated" class="font-medium text-slate-700 flex items-center gap-1">
+                        <i data-lucide="clock" class="w-3 h-3"></i> <span id="clock-text">--/--/---- --:--:--</span>
+                    </span>
+                </div>
+                <div class="h-8 w-px bg-bordergrey"></div>
+                <div class="flex flex-col text-right">
+                    <span class="text-slate-400 text-xs font-semibold uppercase">Total Loaded</span>
+                    <span id="total-loaded" class="font-bold text-blue-600">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- KANDUNGAN DASHBOARD -->
+    <main class="flex-1 px-8 py-8 flex flex-col gap-8 max-w-[1920px] mx-auto w-full z-10">
+        
+        <!-- PANDANGAN MUKA DEPAN -->
+        <div id="dashboard-view" class="flex flex-col gap-8 fade-in">
+            
+            <!-- Global KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 flex-shrink-0">
+                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5">
+                    <div class="p-3.5 bg-slate-50 text-slate-600 rounded-xl shadow-inner border border-slate-100"><i data-lucide="database" class="w-6 h-6"></i></div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Records</p>
+                        <p id="kpi-total" class="text-3xl font-black text-navy mt-1 tracking-tight">0</p>
+                    </div>
+                </div>
+                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5">
+                    <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl shadow-inner border border-emerald-100/50"><i data-lucide="check-circle" class="w-6 h-6"></i></div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
+                        <p id="kpi-complete" class="text-3xl font-black text-emerald-600 mt-1 tracking-tight">0</p>
+                    </div>
+                </div>
+                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5">
+                    <div class="p-3.5 bg-red-50 text-red-600 rounded-xl shadow-inner border border-red-100/50"><i data-lucide="alert-circle" class="w-6 h-6"></i></div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending (Incomplete)</p>
+                        <p id="kpi-pending" class="text-3xl font-black text-red-600 mt-1 tracking-tight">0</p>
+                    </div>
+                </div>
+                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5 cursor-pointer group" onclick="document.getElementById('btn-stats').click()">
+                    <div class="p-3.5 bg-blue-50 text-blue-600 rounded-xl shadow-inner border border-blue-100/50 group-hover:bg-blue-600 group-hover:text-white transition-colors"><i data-lucide="users" class="w-6 h-6"></i></div>
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Staff (Active)</p>
+                        <p id="kpi-editors" class="text-3xl font-black text-navy mt-1 tracking-tight">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200/60 pb-4 gap-4">
+                <div>
+                    <h3 class="text-xl font-extrabold text-navy tracking-tight">Task & Distribution Center</h3>
+                    <p class="text-sm text-slate-500 mt-1 font-medium">Please select a unit to view and start editing rejected records.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="btn-stats" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i> Statistical Report
+                    </button>
+                    <button id="btn-admin-panel" class="bg-navy hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg">
+                        <i data-lucide="folder-sync" class="w-4 h-4 text-emerald-400"></i> Import Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Folders Grid (Diselaraskan 100% Seragam & Minimalis) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                
+                <!-- Folder 1: UPK -->
+                <div onclick="showUnit('UPK')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
+                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
+                        <div class="flex items-start gap-3 mb-2">
+                            <i data-lucide="folder" class="w-8 h-8 text-blue-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
+                            <div>
+                                <h4 class="text-lg font-bold text-slate-700 leading-none">Unit UPK</h4>
+                                <p class="text-[10px] font-semibold text-slate-400 mt-1.5 leading-tight">Collection Development Unit</p>
+                            </div>
+                        </div>
+                        <p class="text-4xl font-black text-navy mt-2"><span id="count-upk">0</span></p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Task Records</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-3 flex items-center justify-end relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
+                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    </div>
+                </div>
+
+                <!-- Folder 2: UPKK -->
+                <div onclick="showUnit('UPKK')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-teal-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
+                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
+                        <div class="flex items-start gap-3 mb-2">
+                            <i data-lucide="folder" class="w-8 h-8 text-teal-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
+                            <div>
+                                <h4 class="text-lg font-bold text-slate-700 leading-none">Unit UPKK</h4>
+                                <p class="text-[10px] font-semibold text-slate-400 mt-1.5 leading-tight">Special Collection Management Unit</p>
+                            </div>
+                        </div>
+                        <p class="text-4xl font-black text-navy mt-2"><span id="count-upkk">0</span></p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Task Records</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-teal-400 to-teal-500 p-3 flex items-center justify-end relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
+                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    </div>
+                </div>
+
+                <!-- Folder 3: UPMD -->
+                <div onclick="showUnit('UPMD')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-purple-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
+                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
+                        <div class="flex items-start gap-3 mb-2">
+                            <i data-lucide="folder" class="w-8 h-8 text-purple-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
+                            <div>
+                                <h4 class="text-lg font-bold text-slate-700 leading-none">Unit UPMD</h4>
+                                <p class="text-[10px] font-semibold text-slate-400 mt-1.5 leading-tight">Digital Information Management Unit</p>
+                            </div>
+                        </div>
+                        <p class="text-4xl font-black text-navy mt-2"><span id="count-upmd">0</span></p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Task Records</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-3 flex items-center justify-end relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
+                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    </div>
+                </div>
+
+                <!-- Folder 4: ITEM -->
+                <div onclick="showUnit('Item')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100 relative">
+                    <div class="absolute -right-6 -top-5 bg-red-500 text-white text-[10px] font-bold px-8 py-1.5 transform rotate-45 z-20 shadow-md tracking-wider">NEW</div>
+                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
+                        <div class="flex items-start gap-3 mb-2">
+                            <i data-lucide="folder-search" class="w-8 h-8 text-amber-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
+                            <div>
+                                <h4 class="text-lg font-bold text-amber-900 leading-none">ITEM <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded align-top ml-1">New</span></h4>
+                                <p class="text-[10px] font-semibold text-amber-600 mt-1.5 leading-tight">Needs Review & Distribution</p>
+                            </div>
+                        </div>
+                        <p class="text-4xl font-black text-navy mt-2"><span id="count-item">0</span></p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Unassigned</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-amber-400 to-amber-500 p-3 flex items-center justify-end relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
+                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    </div>
+                </div>
+
+                <!-- Folder 5: SELESAI -->
+                <div onclick="showUnit('Complete')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
+                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
+                        <div class="flex items-start gap-3 mb-2">
+                            <i data-lucide="check-square" class="w-8 h-8 text-emerald-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
+                            <div>
+                                <h4 class="text-lg font-bold text-emerald-900 leading-none">COMPLETED</h4>
+                                <p class="text-[10px] font-semibold text-emerald-600 mt-1.5 leading-tight">Full KIK Archive</p>
+                            </div>
+                        </div>
+                        <p class="text-4xl font-black text-navy mt-2"><span id="count-complete">0</span></p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Archived Records</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-emerald-400 to-emerald-500 p-3 flex items-center justify-end relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
+                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANDANGAN SENARAI JADUAL -->
+        <div id="list-view" class="hidden flex-col gap-5">
+            
+            <div class="flex flex-col lg:flex-row justify-between items-center gap-4 flex-shrink-0 bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/60 shadow-sm">
+                <div class="flex items-center gap-4 w-full lg:w-auto">
+                    <button onclick="showDashboard()" class="bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 p-2.5 rounded-xl transition-all shadow-sm hover:shadow" title="Back to Dashboard">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    </button>
+                    <div>
+                        <h3 id="current-unit-title" class="text-2xl font-black text-navy tracking-tight">Folder: UPK</h3>
+                        <p class="text-[11px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">Task Record List</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 w-full lg:w-auto overflow-x-auto">
+                    <div class="relative w-72">
+                        <i data-lucide="search" class="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                        <input type="text" id="search-input" placeholder="Search Material or Editor..." 
+                            class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:bg-white focus:border-blue-500 transition-all shadow-inner font-medium placeholder-slate-400">
+                    </div>
+                    
+                    <select id="filter-editor" class="text-sm bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:bg-white focus:border-blue-500 min-w-[160px] font-bold text-slate-700 shadow-sm transition-all appearance-none pr-10" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;">
+                        <option value="All">All Editors</option>
+                    </select>
+
+                    <!-- BUTANG EXPORT EXCEL (FUNGSI BAHARU) -->
+                    <button onclick="downloadUnitExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center gap-2 whitespace-nowrap text-sm font-bold" title="Download Records for this Folder to Excel">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">Download Excel</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm flex flex-col relative overflow-hidden" style="height: calc(100vh - 240px); min-height: 600px;">
+                
+                <div id="loading-state" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center transition-opacity duration-300">
+                    <div class="bg-white p-5 rounded-2xl shadow-xl border border-slate-100 flex flex-col items-center">
+                        <i data-lucide="loader-2" class="w-8 h-8 text-blue-600 animate-spin mb-3"></i>
+                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">Synchronizing...</span>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-auto bg-white">
+                    <table class="w-full text-left border-collapse table-fixed">
+                        <thead class="bg-slate-50/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                                <th class="px-5 py-4 w-[5%]">No.</th>
+                                <th class="px-5 py-4 w-[12%] text-emerald-700">Import Date</th>
+                                <th class="px-5 py-4 w-[35%]">Material (Error Details)</th>
+                                <th class="px-5 py-4 w-[15%]">Select Editor</th>
+                                <th class="px-5 py-4 w-[10%]">Select Unit</th>
+                                <th class="px-5 py-4 w-[11%]">Status</th>
+                                <th class="px-5 py-4 w-[12%]">Date Completed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="text-xs divide-y divide-slate-100 text-slate-600">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="bg-slate-50 border-t border-slate-200/60 px-6 py-4 flex items-center justify-between">
+                    <span id="showing-text" class="text-xs text-slate-500 font-medium">Showing 0 records</span>
+                    
+                    <div class="flex items-center gap-3">
+                        <button id="btn-prev" class="px-4 py-2 border border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-100 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-all shadow-sm">
+                            <i data-lucide="chevron-left" class="w-4 h-4 inline -ml-1 mr-1"></i> Previous
+                        </button>
+                        <span id="page-text" class="text-xs text-slate-600 font-bold px-3 bg-slate-200/50 py-1.5 rounded-lg">Page 1 of 1</span>
+                        <button id="btn-next" class="px-4 py-2 border border-slate-200 rounded-xl bg-white text-slate-700 hover:bg-slate-100 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-all shadow-sm">
+                            Next <i data-lucide="chevron-right" class="w-4 h-4 inline -mr-1 ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-navy text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 toast-enter z-50 font-medium">
+        <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+        <span id="toast-msg" class="text-sm">Notification</span>
+    </div>
+
+    <!-- Modals -->
+    <div id="marc-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col transform scale-95 transition-transform duration-300" id="marc-modal-content">
+            <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-navy flex items-center gap-2">
+                    <i data-lucide="file-code-2" class="w-5 h-5 text-blue-600"></i>
+                    Full Record Details <span id="modal-bil" class="text-blue-600 ml-1"></span>
+                </h3>
+                <button onclick="closeModal('marc-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 font-mono text-[14px] text-slate-800 whitespace-pre-wrap bg-white border border-slate-200 rounded-xl shadow-inner m-5 leading-relaxed tracking-tight" id="modal-text"></div>
+            <div class="px-6 py-4 border-t border-bordergrey bg-slate-50 rounded-b-2xl flex justify-end">
+                <button onclick="closeModal('marc-modal')" class="px-6 py-2.5 bg-white hover:bg-slate-100 text-slate-700 text-sm font-bold rounded-xl transition-colors border border-slate-300 shadow-sm">Close View</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300" id="stats-modal-content">
+            <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-navy flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-blue-600"></i> KIK Performance Report
+                </h3>
+                <button onclick="closeModal('stats-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50" id="stats-container"></div>
+            <div class="px-6 py-4 border-t border-bordergrey bg-slate-50 rounded-b-2xl flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <select id="report-type-select" class="px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 shadow-sm cursor-pointer appearance-none pr-8" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;">
+                        <option value="all">All (Overall)</option>
+                        <option value="unit">Unit Report</option>
+                        <option value="individu">Individual Report</option>
+                    </select>
+                    <button onclick="downloadStatsCSV()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4"></i> Download
+                    </button>
+                </div>
+                <button onclick="closeModal('stats-modal')" class="px-6 py-2.5 bg-white hover:bg-slate-100 text-slate-700 text-sm font-bold rounded-xl transition-colors border border-slate-300 shadow-sm">Close Report</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col transform scale-95 transition-transform duration-300" id="pin-modal-content">
+            <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-navy flex items-center gap-2">
+                    <i data-lucide="lock" class="w-5 h-5 text-slate-500"></i> Administrator Access
+                </h3>
+                <button onclick="closeModal('pin-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <label class="text-sm text-slate-600 font-bold">Please enter Administrator PIN:</label>
+                <input type="password" id="admin-pin-input" onkeydown="if(event.key === 'Enter') verifyPin()" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors outline-none font-bold tracking-widest text-center" placeholder="••••••••">
+                <button onclick="verifyPin()" class="mt-3 bg-navy hover:bg-slate-800 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors w-full shadow-md">Verify Access PIN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col transform scale-95 transition-transform duration-300" id="admin-modal-content">
+            <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-navy flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-5 h-5 text-emerald-600"></i> Administrator Panel
+                </h3>
+                <button onclick="closeModal('admin-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <p class="text-sm text-slate-600 font-medium">This area is dedicated to system data management.</p>
+                <div class="bg-blue-50/50 border border-blue-200/50 rounded-xl p-5 flex flex-col gap-3 mt-2">
+                    <h4 class="font-bold text-navy text-sm flex items-center gap-2">
+                        <i data-lucide="folder-sync" class="w-5 h-5 text-blue-600"></i> Error Synchronization
+                    </h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">The system will fetch new data from Google Drive directly to the bottom of the spreadsheet without deleting old records.</p>
+                    <button id="btn-import" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                        <i data-lucide="hard-drive-download" class="w-5 h-5"></i> START IMPORT NOW
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbys6FxEyt0lNsutWe3Lg1u6MI3N0-2HrTyKUakyC2pIgqPWYYVS20c9AINTyMSTBkIjIQ/exec"; 
+        const ADMIN_PIN = "kik2026"; 
+
+        let tableData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 50; 
+        let activeUnit = null; 
+        let dynamicEditors = [];
+        
+        const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
+        const listEditors = [
+            "Sistem", "Library admin", "NORHAYATI BT MAJID", "MAZIDAH BINTI ABD RAHMAN", 
+            "NURFATIHAH BT S BAHARUDDIN", "NOR FAZILAH BT ABDULLAH ZAWAWI", "WAN AZURA BT WAN AHMAD MUJI", 
+            "NOOR SAKINAH BT IBARAHIM", "ANDRIA GANA ANAK GIRI", "NOOREYZAN BT MANANGIN", 
+            "SHAFIQ BIN S. BAHARUDDIN", "MAIZAITUL HUSNA BT ABDUL HALIM"
+        ];
+        
+        const DOM = {
+            dashboardView: document.getElementById('dashboard-view'),
+            listView: document.getElementById('list-view'),
+            tbody: document.getElementById('table-body'),
+            search: document.getElementById('search-input'),
+            filterEditor: document.getElementById('filter-editor'),
+            toast: document.getElementById('toast'),
+            toastMsg: document.getElementById('toast-msg'),
+            btnPrev: document.getElementById('btn-prev'),
+            btnNext: document.getElementById('btn-next'),
+            pageText: document.getElementById('page-text'),
+            showingText: document.getElementById('showing-text'),
+            appLoader: document.getElementById('app-loader')
+        };
+
+        lucide.createIcons();
+
+        function normalizeEditorName(rawName) {
+            if (!rawName) return 'Sistem';
+            let ed = rawName.toString().trim();
+            if (!ed) return 'Sistem';
+            
+            let edClean = ed.replace(/\s+/g, ' '); 
+            let edNoSpace = edClean.toLowerCase().replace(/[^a-z0-9]/g, ''); 
+
+            if (edNoSpace === 'sistem' || edNoSpace === '') return 'Sistem';
+            if (edNoSpace === 'libraryadmin') return 'Library admin';
+            if (edNoSpace === 'autoimport') return 'Auto Import';
+
+            let found = listEditors.find(e => e.toLowerCase().replace(/[^a-z0-9]/g, '') === edNoSpace);
+            if (found) return found;
+
+            let validStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
+            
+            found = validStaff.find(e => e.toLowerCase().replace(/[^a-z0-9]/g, '').includes(edNoSpace) && edNoSpace.length > 3);
+            if (found) return found;
+            
+            found = validStaff.find(e => edNoSpace.includes(e.toLowerCase().replace(/[^a-z0-9]/g, '')) && e.length > 3);
+            if (found) return found;
+
+            return edClean.toUpperCase(); 
+        }
+
+        function isCompleteStatus(rawStatus) {
+            if (!rawStatus) return false;
+            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
+            return (s.includes('complete') || s.includes('selesai') || s.includes('done') || s.includes('siap'));
+        }
+
+        function normalizeStatus(rawStatus) {
+            return isCompleteStatus(rawStatus) ? 'Complete' : 'Pending';
+        }
+
+        function normalizeUnit(rawUnit) {
+            if (!rawUnit) return 'Auto Import';
+            let u = rawUnit.toString().trim().toUpperCase();
+            if (u === 'UPKK' || u.includes('UPKK')) return 'UPKK';
+            if (u === 'UPK' || (u.includes('UPK') && !u.includes('UPKK'))) return 'UPK';
+            if (u === 'UPMD' || u.includes('UPMD')) return 'UPMD';
+            return 'Auto Import';
+        }
+
+        async function init() {
+            updateTimestamp();
+            try {
+                if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
+                    tableData = generateMockData(150); 
+                } else {
+                    const response = await fetch(GAS_WEB_APP_URL);
+                    const resJson = await response.json();
+                    if(resJson.status === 'success') {
+                        tableData = resJson.data.map(r => {
+                            r.Editor = normalizeEditorName(r.Editor);
+                            r.Status = normalizeStatus(r.Status);
+                            r.Unit = normalizeUnit(r.Unit);
+                            return r;
+                        });
+                    } else throw new Error(resJson.message);
+                }
+                
+                populateFilters();
+                showDashboard(); 
+                
+            } catch (err) {
+                showToast("Failed to fetch data. Please check the link.", "error");
+            } finally {
+                DOM.appLoader.style.opacity = '0';
+                setTimeout(() => DOM.appLoader.style.display = 'none', 500);
+            }
+        }
+
+        function showDashboard() {
+            activeUnit = null;
+            DOM.dashboardView.classList.remove('hidden');
+            DOM.dashboardView.classList.add('flex');
+            DOM.listView.classList.add('hidden');
+            DOM.listView.classList.remove('flex');
+            
+            updateKPIs();
+            updateFolderCounts();
+        }
+
+        function showUnit(unitName) {
+            activeUnit = unitName;
+            DOM.dashboardView.classList.add('hidden');
+            DOM.dashboardView.classList.remove('flex');
+            DOM.listView.classList.remove('hidden');
+            DOM.listView.classList.add('flex');
+            
+            let folderTitle = '';
+            if (unitName === 'Item') folderTitle = 'ITEM (New/Unassigned)';
+            else if (unitName === 'Complete') folderTitle = 'COMPLETED ARCHIVE';
+            else folderTitle = `Unit ${unitName}`;
+            
+            document.getElementById('current-unit-title').textContent = `Folder: ${folderTitle}`;
+            
+            DOM.search.value = '';
+            DOM.filterEditor.value = 'All';
+            applyFilters();
+        }
+
+        function updateKPIs() {
+            const validData = tableData.filter(r => r.Status === 'Complete' || (r.Bahan && r.Bahan.includes('LEADER')));
+            
+            const total = validData.length;
+            const complete = validData.filter(r => r.Status === 'Complete').length;
+            const pending = total - complete;
+            
+            const activeEditors = new Set(
+                validData
+                    .map(r => r.Editor)
+                    .filter(e => e && e !== 'Sistem' && e !== 'Library admin' && e !== 'Auto Import')
+            );
+
+            document.getElementById('kpi-total').textContent = total.toLocaleString();
+            document.getElementById('kpi-complete').textContent = complete.toLocaleString();
+            document.getElementById('kpi-pending').textContent = pending.toLocaleString();
+            document.getElementById('kpi-editors').textContent = activeEditors.size.toLocaleString();
+            document.getElementById('total-loaded').textContent = tableData.length.toLocaleString();
+        }
+
+        function updateFolderCounts() {
+            let upk = 0, upkk = 0, upmd = 0, item = 0, comp = 0;
+            
+            tableData.forEach(r => {
+                const isFragment = !(r.Bahan && r.Bahan.includes('LEADER'));
+
+                if (r.Status === 'Complete') {
+                    comp++;
+                } else if (!isFragment) {
+                    const u = r.Unit;
+                    if (u === 'UPK') upk++;
+                    else if (u === 'UPKK') upkk++;
+                    else if (u === 'UPMD') upmd++;
+                    else item++; 
+                }
+            });
+            
+            document.getElementById('count-upk').textContent = upk.toLocaleString();
+            document.getElementById('count-upkk').textContent = upkk.toLocaleString();
+            document.getElementById('count-upmd').textContent = upmd.toLocaleString();
+            document.getElementById('count-item').textContent = item.toLocaleString();
+            document.getElementById('count-complete').textContent = comp.toLocaleString();
+        }
+
+        function populateFilters() {
+            const foundEditors = new Set(
+                tableData
+                    .map(r => r.Editor)
+                    .filter(e => e && e !== 'Sistem' && e !== 'Library admin')
+            );
+            dynamicEditors = Array.from(foundEditors).sort();
+
+            DOM.filterEditor.innerHTML = '<option value="All">All Editors</option>';
+            dynamicEditors.forEach(ed => {
+                DOM.filterEditor.insertAdjacentHTML('beforeend', `<option value="${ed}">${ed}</option>`);
+            });
+        }
+
+        function applyFilters() {
+            const search = DOM.search.value.toLowerCase();
+            const editor = DOM.filterEditor.value;
+
+            filteredData = tableData.filter(row => {
+                const matchSearch = (row.Bahan?.toLowerCase().includes(search) || row.Editor?.toLowerCase().includes(search));
+                const matchEditor = editor === 'All' || row.Editor === editor;
+                
+                let matchUnit = false;
+                const isComp = (row.Status === 'Complete');
+                const isFragment = !(row.Bahan && row.Bahan.includes('LEADER'));
+
+                if (activeUnit === 'Complete') {
+                    matchUnit = isComp; 
+                } else if (activeUnit === 'Item') {
+                    matchUnit = !isComp && !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                } else {
+                    matchUnit = !isComp && !isFragment && (row.Unit === activeUnit);
+                }
+                
+                return matchSearch && matchEditor && matchUnit;
+            });
+            
+            currentPage = 1;
+            renderTable();
+        }
+
+        DOM.search.addEventListener('input', applyFilters);
+        DOM.filterEditor.addEventListener('change', applyFilters);
+
+        function renderTable() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const paginatedData = filteredData.slice(startIndex, endIndex);
+
+            const rowsHTML = paginatedData.map(row => {
+                const isComplete = (row.Status === 'Complete');
+                const statusClass = isComplete ? 'text-emerald-700 bg-emerald-50 border-emerald-200 focus:ring-emerald-500/30' : 'text-red-700 bg-red-50 border-red-200 focus:ring-red-500/30';
+                const dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
+                
+                const isEditorLocked = row.Editor && row.Editor !== 'Sistem';
+                const editorSelectClass = isEditorLocked 
+                    ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner" 
+                    : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
+
+                const defaultSelectClass = "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
+
+                return `
+                <tr class="table-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors" data-rowidx="${row.RowIdx}" data-bil="${row.Bil}">
+                    <td class="px-5 py-5 font-bold text-slate-900 align-top">${row.Bil}</td>
+                    <td class="px-5 py-5 font-mono text-[11px] text-emerald-600 font-semibold align-top">${dateHarvest}</td>
+                    <td class="px-5 py-5 align-top max-w-[300px]">
+                        ${formatBahanColumn(row.Bahan)}
+                        <button onclick="viewDetails('${row.RowIdx}')" class="text-blue-600 hover:text-white hover:bg-blue-600 text-[10px] font-bold flex items-center gap-1.5 transition-all bg-blue-50/50 border border-blue-200 hover:border-blue-600 px-3 py-1.5 rounded-lg inline-flex mt-2 shadow-sm">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i> View MARC Details
+                        </button>
+                    </td>
+                    <td class="px-5 py-5 align-top" title="Double-click to unlock" ondblclick="unlockEditor(this)">
+                        <select class="${editorSelectClass}" data-field="Editor" ${isEditorLocked ? 'disabled' : ''}>
+                            <option value="Sistem">Sistem</option>
+                            ${generateOptions(dynamicEditors, row.Editor)}
+                        </select>
+                    </td>
+                    <td class="px-5 py-5 align-top">
+                        <select class="${defaultSelectClass}" data-field="Unit">
+                            ${generateOptions(listUnits, row.Unit)}
+                        </select>
+                    </td>
+                    <td class="px-5 py-5 align-top">
+                        <select class="w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass}" data-field="Status">
+                            <option value="Pending" ${!isComplete ? 'selected' : ''}>Pending</option>
+                            <option value="Complete" ${isComplete ? 'selected' : ''}>Complete</option>
+                        </select>
+                    </td>
+                    <td class="px-5 py-5 text-slate-500 font-mono text-[11px] font-semibold date-col align-top">${row.Date || '-'}</td>
+                </tr>`;
+            }).join('');
+
+            DOM.tbody.innerHTML = rowsHTML;
+            
+            DOM.showingText.textContent = `Showing ${filteredData.length > 0 ? startIndex + 1 : 0} to ${Math.min(endIndex, filteredData.length)} of ${filteredData.length.toLocaleString()} records`;
+            DOM.pageText.textContent = `Page ${currentPage} of ${totalPages}`;
+            
+            DOM.btnPrev.disabled = currentPage === 1;
+            DOM.btnNext.disabled = currentPage === totalPages || totalPages === 0;
+
+            lucide.createIcons();
+        }
+
+        DOM.btnPrev.addEventListener('click', () => {
+            if (currentPage > 1) { currentPage--; renderTable(); }
+        });
+
+        DOM.btnNext.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage < totalPages) { currentPage++; renderTable(); }
+        });
+
+        DOM.tbody.addEventListener('change', async (e) => {
+            if (e.target.tagName.toLowerCase() === 'select') {
+                const select = e.target;
+                const tr = select.closest('tr');
+                const rowIdx = tr.dataset.rowidx; 
+                const bilDisplay = tr.dataset.bil; 
+                const field = select.dataset.field; 
+                
+                const record = tableData.find(r => String(r.RowIdx) === String(rowIdx));
+                if(!record) return;
+
+                const statusSelect = tr.querySelector('[data-field="Status"]');
+                const editorSelect = tr.querySelector('[data-field="Editor"]');
+                const unitSelect = tr.querySelector('[data-field="Unit"]');
+                const dateCol = tr.querySelector('.date-col');
+                
+                let newStatus = statusSelect.value;
+                let newEditor = editorSelect.value;
+                let newUnit = unitSelect.value;
+                let newDate = record.Date;
+
+                if (field === 'Status' && newStatus === 'Complete') {
+                    const d = new Date();
+                    newDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                }
+
+                const oldDate = dateCol.textContent;
+                const oldStatusClass = statusSelect.className;
+                
+                if (field === 'Status') {
+                    statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newStatus === 'Complete' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`;
+                    dateCol.textContent = newDate || '-';
+                }
+                tr.style.opacity = '0.5';
+                select.disabled = true; 
+
+                const success = await saveRecord(rowIdx, newStatus, newDate, newEditor, newUnit);
+
+                if (success) {
+                    tr.style.opacity = '1';
+                    select.disabled = false;
+                    
+                    record.Status = newStatus;
+                    record.Date = newDate;
+                    record.Editor = normalizeEditorName(newEditor);
+                    record.Unit = normalizeUnit(newUnit);
+                    
+                    if (field === 'Editor' && record.Editor !== 'Sistem') {
+                        editorSelect.disabled = true;
+                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner";
+                        populateFilters();
+                    }
+                    
+                    showToast(`Record No. #${bilDisplay} successfully updated.`);
+                    
+                    let matchesCurrentFolder = false;
+                    if (activeUnit === 'Complete') {
+                        matchesCurrentFolder = (record.Status === 'Complete');
+                    } else if (activeUnit === 'Item') {
+                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
+                    } else {
+                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit === activeUnit);
+                    }
+
+                    if (!matchesCurrentFolder) {
+                        applyFilters(); 
+                    }
+
+                    updateKPIs();
+                    updateFolderCounts();
+                } else {
+                    if (field === 'Status') {
+                        statusSelect.value = record.Status;
+                        statusSelect.className = oldStatusClass;
+                        dateCol.textContent = oldDate;
+                    } else if (field === 'Editor') editorSelect.value = record.Editor;
+                    else if (field === 'Unit') unitSelect.value = record.Unit;
+                    
+                    tr.style.opacity = '1';
+                    select.disabled = false;
+                    showToast(`Failed to update Record #${bilDisplay}.`, "error");
+                }
+            }
+        });
+
+        async function saveRecord(rowIdx, status, date, editor, unit) {
+            if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
+                return new Promise(r => setTimeout(() => r(true), 500)); 
+            }
+            try {
+                const res = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+                    body: JSON.stringify({ action: 'update', rowIdx, status, date, editor, unit })
+                });
+                const data = await res.json();
+                return data.status === 'success';
+            } catch(e) { return false; }
+        }
+
+        document.getElementById('btn-admin-panel').addEventListener('click', () => {
+            document.getElementById('admin-pin-input').value = '';
+            openModal('pin-modal');
+            setTimeout(() => document.getElementById('admin-pin-input').focus(), 10);
+        });
+
+        document.getElementById('btn-stats').addEventListener('click', () => {
+            generateStatistics();
+            openModal('stats-modal');
+        });
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            const content = document.getElementById(id + '-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const content = document.getElementById(id + '-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function verifyPin() {
+            if (document.getElementById('admin-pin-input').value === ADMIN_PIN) {
+                closeModal('pin-modal');
+                setTimeout(() => openModal('admin-modal'), 300); 
+            } else {
+                showToast("Invalid PIN. Access denied.", "error");
+            }
+        }
+
+        document.getElementById('btn-import').addEventListener('click', async () => {
+            closeModal('admin-modal'); 
+            const loader = document.getElementById('app-loader');
+            loader.querySelector('h3').textContent = "Synchronizing Errors...";
+            loader.querySelector('p').textContent = "Importing files from Google Drive. This process will take some time.";
+            loader.style.opacity = '1';
+            loader.style.display = 'flex';
+
+            try {
+                if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
+                    await new Promise(r => setTimeout(r, 1500));
+                    showToast("Import Simulation Successful.", "success");
+                } else {
+                    const res = await fetch(GAS_WEB_APP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'import_drive' })
+                    });
+                    const data = await res.json();
+                    
+                    if(data.status === 'success') {
+                        showToast(data.message, "success");
+                        const response = await fetch(GAS_WEB_APP_URL);
+                        const resJson = await response.json();
+                        if(resJson.status === 'success') {
+                            tableData = resJson.data.map(r => {
+                                r.Editor = normalizeEditorName(r.Editor);
+                                r.Status = normalizeStatus(r.Status);
+                                r.Unit = normalizeUnit(r.Unit);
+                                return r;
+                            });
+                            if(activeUnit) applyFilters(); 
+                            else showDashboard();
+                        }
+                    } else showToast(data.message, "error");
+                }
+            } catch(e) {
+                showToast("System error while importing files.", "error");
+            } finally {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        });
+
+        function unlockEditor(tdElement) {
+            const selectElement = tdElement.querySelector('select');
+            if(selectElement && selectElement.disabled) {
+                selectElement.disabled = false;
+                selectElement.className = "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
+                showToast("Editor lock temporarily opened.", "success");
+            }
+        }
+
+        // ==========================================
+        // PENYERAGAMAN KOTAK RALAT (ERROR BOX)
+        // ==========================================
+        function formatBahanColumn(text) {
+            if(!text) return '-';
+            let html = '';
+            
+            // Pengesanan dinamik (Dynamic Detection) untuk mencari "Error list:"
+            const hasErrorList = text.toLowerCase().includes('error list:');
+            
+            if (hasErrorList) {
+                let errorHtml = '';
+                let jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                
+                // Cuba Parse JSON jika ada format yang betul
+                if (jsonMatch) {
+                    try {
+                        let jsonStr = jsonMatch[0].replace(/&quot;/g, '"');
+                        const errors = JSON.parse(jsonStr);
+                        errorHtml = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
+                    } catch(e) {
+                        console.log("JSON Parse Error", e);
+                    }
+                }
+                
+                // FALLBACK: Jika format JSON rosak/tiada tetapi perkataan "Error list:" tetap ada
+                if (!errorHtml) {
+                    let rawErrorMatch = text.match(/error list:\s*([\s\S]*?)(?=LEADER|$)/i);
+                    let rawErrorText = rawErrorMatch ? rawErrorMatch[1].trim().replace(/</g, "&lt;").replace(/>/g, "&gt;") : "Error details could not be formatted.";
+                    errorHtml = `<span class="text-red-700 font-bold text-[11px]">${rawErrorText}</span>`;
+                }
+                
+                // HTML structure & style yang konsisten dijamin untuk SEMUA rekod ralat
+                html += `<div class="error-box mb-2 p-2.5 bg-red-50 border border-red-100 rounded-lg shadow-inner">${errorHtml}</div>`;
+            }
+            
+            let leaderIndex = text.indexOf('LEADER');
+            let marcText = leaderIndex !== -1 ? text.substring(leaderIndex) : text;
+            marcText = marcText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            if(marcText) {
+                let snippet = marcText.length > 180 ? marcText.substring(0, 180) + '...' : marcText;
+                const errorTags = ['100', '110', '245', '650', '700'];
+                const tagRegex = new RegExp(`\\b(${errorTags.join('|')})\\b`, 'g');
+                snippet = snippet.replace(tagRegex, '<span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300 font-bold">$1</span>');
+                html += `<div class="text-[11px] text-slate-500 font-mono leading-relaxed line-clamp-3 bg-slate-50 p-2 rounded-lg border border-slate-100">${snippet}</div>`;
+            }
+            return html;
+        }
+
+        function generateOptions(list, currentValue) {
+            let options = [...list];
+            const cv = currentValue ? currentValue.trim() : '';
+            if (cv && cv.toLowerCase() !== 'sistem' && !options.includes(cv)) options.unshift(cv); 
+            return options.map(opt => `<option value="${opt}" ${cv === opt ? 'selected' : ''}>${opt}</option>`).join('');
+        }
+
+        function formatMARCForDisplay(text) {
+            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            let dynamicErrorTags = [];
+            
+            let jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonMatch) {
+                try {
+                    const jsonStr = jsonMatch[0].replace(/&quot;/g, '"');
+                    const errors = JSON.parse(jsonStr);
+                    errors.forEach(e => {
+                        if(e.tag) {
+                            const match = e.tag.match(/^(\d{3})/);
+                            if(match) dynamicErrorTags.push(match[1]);
+                        }
+                    });
+                } catch(e) {}
+            }
+
+            let leaderMatches = [];
+            safeText = safeText.replace(/(LEADER\s.{24})/g, (match) => {
+                leaderMatches.push(match);
+                return `\n___LEADER_${leaderMatches.length - 1}___\n`;
+            });
+            
+            const commonTags = ['001','003','005','008','020','022','040','050','060','082','090','100','110','130','245','246','250','260','264','300','336','337','338','490','500','504','505','520','650','651','700','710','830','856','942','999'];
+            const tagRegex = new RegExp(`([^\\s\\n])(${commonTags.join('|')})(?=[ \\t]|\\d{1,2}\\$|\\$)`, 'g');
+            safeText = safeText.replace(tagRegex, '$1\n$2');
+            
+            leaderMatches.forEach((match, index) => {
+                safeText = safeText.replace(`___LEADER_${index}___`, match);
+            });
+            
+            // Struktur yang konsisten dan kebal untuk modal pop-up juga
+            safeText = safeText.replace(/Error list:\s*([\s\S]*?)(?=LEADER|$)/i, (match, errorDetails) => {
+                return `<span class="error-box text-rose-600 bg-rose-50 px-2 py-1 rounded-md font-semibold border border-rose-200 block my-2 shadow-sm">Error list:\n${errorDetails.trim()}</span>\n`;
+            });
+            
+            const specificTags = ['100', '110', '245', '650', '700'];
+            safeText = safeText.replace(/^([A-Z]+|\d{3})(?=\s)/gm, (match, tag) => {
+                if (dynamicErrorTags.includes(tag)) {
+                    return `<span class="bg-red-500 text-white px-1.5 py-0.5 rounded shadow-sm font-bold" title="Error Tag">${tag}</span>`;
+                } else if (specificTags.includes(tag)) {
+                    return `<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300 font-bold" title="Main Tag">${tag}</span>`;
+                }
+                return `<span class="text-blue-600 font-bold">${tag}</span>`;
+            });
+
+            safeText = safeText.replace(/(\$[a-z0-9])/g, '<span class="text-emerald-600 font-bold">$1</span>');
+            return safeText.replace(/\n{2,}/g, '\n').trim();
+        }
+
+        function viewDetails(rowIdx) {
+            const record = tableData.find(r => String(r.RowIdx) === String(rowIdx));
+            if(!record) return;
+
+            document.getElementById('modal-bil').textContent = `#${record.Bil}`;
+            document.getElementById('modal-text').innerHTML = formatMARCForDisplay(record.Bahan);
+            openModal('marc-modal');
+        }
+
+        function generateStatistics() {
+            const container = document.getElementById('stats-container');
+            const validData = tableData.filter(r => r.Status === 'Complete' || (r.Bahan && r.Bahan.includes('LEADER')));
+            const totalRecords = validData.length;
+            
+            if (totalRecords === 0) {
+                container.innerHTML = '<p class="text-center text-slate-500 py-10 font-medium">No data to display at the moment.</p>';
+                return;
+            }
+
+            const totalCompleted = validData.filter(r => r.Status === 'Complete').length;
+            const overallPercent = totalRecords > 0 ? Math.round((totalCompleted / totalRecords) * 100) : 0;
+
+            let editorStats = {};
+            validData.forEach(r => {
+                let ed = r.Editor;
+                if (!ed || ed === 'Sistem' || ed === 'Library admin' || ed === 'Auto Import') return; 
+                
+                if (!editorStats[ed]) editorStats[ed] = { assigned: 0, completed: 0 };
+                
+                editorStats[ed].assigned++;
+                if (r.Status === 'Complete') editorStats[ed].completed++;
+            });
+
+            const sortedEditors = Object.entries(editorStats)
+                .map(([name, data]) => ({name, ...data}))
+                .sort((a, b) => b.completed - a.completed || b.assigned - a.assigned);
+
+            let editorRows = sortedEditors.map(ed => {
+                const pending = ed.assigned - ed.completed;
+                const percent = ed.assigned > 0 ? Math.round((ed.completed / ed.assigned) * 100) : 0;
+                
+                let barColor = "bg-blue-600";
+                if(percent === 100) barColor = "bg-emerald-500";
+                else if(percent < 30) barColor = "bg-amber-400";
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                        <td class="py-3 pr-4 font-bold text-[11px] text-slate-700">${ed.name}</td>
+                        <td class="py-3 px-2 text-center text-slate-600 font-mono text-[11px] bg-slate-50/50">${ed.assigned}</td>
+                        <td class="py-3 px-2 text-center text-emerald-600 font-bold font-mono text-[11px]">${ed.completed}</td>
+                        <td class="py-3 px-2 text-center text-red-500 font-bold font-mono text-[11px]">${pending}</td>
+                        <td class="py-3 pl-4 w-1/3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-full bg-slate-200 rounded-full h-2">
+                                    <div class="${barColor} h-2 rounded-full transition-all" style="width: ${percent}%"></div>
+                                </div>
+                                <span class="text-[11px] font-extrabold text-slate-600 w-8 text-right">${percent}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            if(!editorRows) editorRows = '<tr><td colspan="5" class="py-6 text-center text-sm text-slate-500 font-medium">No tasks have been selected by any editor yet.</td></tr>';
+
+            let unitStats = {};
+            validData.forEach(r => {
+                let un = r.Unit;
+                if (!unitStats[un]) unitStats[un] = { total: 0, completed: 0 };
+                
+                unitStats[un].total++;
+                if (r.Status === 'Complete') unitStats[un].completed++;
+            });
+
+            const sortedUnits = Object.entries(unitStats).sort((a, b) => b[1].total - a[1].total);
+
+            let unitCards = sortedUnits.map(([unit, data]) => {
+                const percent = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+                const pending = data.total - data.completed;
+                return `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-1.5 h-full ${percent === 100 ? 'bg-emerald-500' : 'bg-blue-600'} opacity-80"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="text-sm font-extrabold text-navy uppercase tracking-wide">${unit}</div>
+                            <div class="text-xs font-bold px-2 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                ${data.total} <span class="font-medium text-[10px]">Records</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-xs mb-3 font-bold">
+                            <span class="text-emerald-600"><i data-lucide="check-circle-2" class="w-3 h-3 inline mr-1"></i>${data.completed} Completed</span>
+                            <span class="text-red-500"><i data-lucide="clock" class="w-3 h-3 inline mr-1"></i>${pending} Pending</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 mb-1.5">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="text-right text-[10px] font-extrabold text-slate-500">${percent}% Completed</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="flex flex-col gap-6">
+                    <div class="bg-navy p-8 rounded-2xl shadow-xl text-white flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+                        <div class="absolute -right-10 -top-10 opacity-[0.05]">
+                            <i data-lucide="bar-chart-3" class="w-64 h-64"></i>
+                        </div>
+                        <div class="flex-1 w-full z-10">
+                            <h4 class="text-slate-300 text-[11px] font-extrabold uppercase tracking-widest mb-1 text-emerald-400">Overall Performance</h4>
+                            <div class="flex items-end gap-3 mb-4">
+                                <span class="text-5xl font-black tracking-tight">${overallPercent}%</span>
+                                <span class="text-sm text-slate-400 mb-2 font-medium">Current Progress Rate</span>
+                            </div>
+                            <div class="w-full bg-slate-700 rounded-full h-3">
+                                <div class="bg-emerald-400 h-3 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.6)]" style="width: ${overallPercent}%"></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-10 z-10 w-full md:w-auto mt-4 md:mt-0">
+                            <div class="text-center md:text-right flex-1">
+                                <div class="text-4xl font-black text-white">${totalRecords.toLocaleString()}</div>
+                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Total Valid Records</div>
+                            </div>
+                            <div class="w-px bg-slate-700"></div>
+                            <div class="text-center md:text-left flex-1">
+                                <div class="text-4xl font-black text-emerald-400">${totalCompleted.toLocaleString()}</div>
+                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Completed</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-2 bg-white rounded-2xl border border-bordergrey shadow-sm overflow-hidden flex flex-col">
+                            <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                                <h4 class="font-extrabold text-navy flex items-center gap-2 text-sm">
+                                    <i data-lucide="user-check" class="w-5 h-5 text-blue-600"></i> Task Analytics (Editor)
+                                </h4>
+                            </div>
+                            <div class="p-6 overflow-y-auto max-h-[420px]">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="text-[10px] text-slate-500 uppercase tracking-wider border-b-2 border-slate-200">
+                                            <th class="pb-3 font-extrabold">Staff / Editor Name</th>
+                                            <th class="pb-3 text-center font-extrabold">Assigned</th>
+                                            <th class="pb-3 text-center font-extrabold text-emerald-600">Completed</th>
+                                            <th class="pb-3 text-center font-extrabold text-red-500">Pending</th>
+                                            <th class="pb-3 pl-4 font-extrabold">Progress Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm">
+                                        ${editorRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="xl:col-span-1 flex flex-col gap-4">
+                            <div class="px-2 pt-2">
+                                <h4 class="font-extrabold text-navy flex items-center gap-2 text-sm mb-1">
+                                    <i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i> Distribution by Unit
+                                </h4>
+                            </div>
+                            <div class="flex flex-col gap-4 max-h-[400px] overflow-y-auto px-1 pb-2">
+                                ${unitCards}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function downloadStatsCSV() {
+            const reportType = document.getElementById('report-type-select').value;
+            const validData = tableData.filter(r => r.Status === 'Complete' || (r.Bahan && r.Bahan.includes('LEADER')));
+            const totalRecords = validData.length;
+            
+            if (totalRecords === 0) {
+                showToast("No data to download.", "error");
+                return;
+            }
+
+            const totalCompleted = validData.filter(r => r.Status === 'Complete').length;
+            const overallPercent = totalRecords > 0 ? Math.round((totalCompleted / totalRecords) * 100) : 0;
+
+            let csvContent = "KATALOG INDUK KEBANGSAAN (KIK) PERFORMANCE REPORT\n";
+            csvContent += `Date Generated:,${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB')}\n`;
+
+            let fileName = `KIK_Report_${new Date().toISOString().slice(0,10)}.csv`;
+
+            if (reportType === 'all' || reportType === 'individu') {
+                let editorStats = {};
+                validData.forEach(r => {
+                    let ed = r.Editor;
+                    if (!ed || ed === 'Sistem' || ed === 'Library admin' || ed === 'Auto Import') return; 
+                    if (!editorStats[ed]) editorStats[ed] = { assigned: 0, completed: 0 };
+                    
+                    editorStats[ed].assigned++;
+                    if (r.Status === 'Complete') editorStats[ed].completed++;
+                });
+
+                const sortedEditors = Object.entries(editorStats)
+                    .map(([name, data]) => ({name, ...data}))
+                    .sort((a, b) => b.completed - a.completed || b.assigned - a.assigned);
+
+                if (reportType === 'individu') {
+                    fileName = `Individual_Report_KIK_${new Date().toISOString().slice(0,10)}.csv`;
+                    csvContent += "\n--- INDIVIDUAL PERFORMANCE (EDITOR) ---\n";
+                } else {
+                    csvContent += "\n--- OVERALL SUMMARY ---\n";
+                    csvContent += "Total Valid Records,Completed,Pending,Completion Rate (%)\n";
+                    csvContent += `${totalRecords},${totalCompleted},${totalRecords - totalCompleted},${overallPercent}%\n\n`;
+                    csvContent += "--- EDITOR PERFORMANCE ---\n";
+                }
+
+                csvContent += "Staff / Editor Name,Assigned,Completed,Pending,Progress Rate (%)\n";
+                sortedEditors.forEach(ed => {
+                    const pending = ed.assigned - ed.completed;
+                    const percent = ed.assigned > 0 ? Math.round((ed.completed / ed.assigned) * 100) : 0;
+                    csvContent += `"${ed.name}",${ed.assigned},${ed.completed},${pending},${percent}%\n`;
+                });
+            }
+
+            if (reportType === 'all' || reportType === 'unit') {
+                let unitStats = {};
+                validData.forEach(r => {
+                    let un = r.Unit;
+                    if (!unitStats[un]) unitStats[un] = { total: 0, completed: 0 };
+                    
+                    unitStats[un].total++;
+                    if (r.Status === 'Complete') unitStats[un].completed++;
+                });
+
+                const sortedUnits = Object.entries(unitStats).sort((a, b) => b[1].total - a[1].total);
+
+                if (reportType === 'unit') {
+                    fileName = `Unit_Report_KIK_${new Date().toISOString().slice(0,10)}.csv`;
+                    csvContent += "\n--- UNIT PERFORMANCE ---\n";
+                } else {
+                    csvContent += "\n--- DISTRIBUTION BY UNIT ---\n";
+                }
+
+                csvContent += "Unit,Total Records,Completed,Pending,Completion Rate (%)\n";
+                sortedUnits.forEach(([unit, data]) => {
+                    const pending = data.total - data.completed;
+                    const percent = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+                    csvContent += `"${unit}",${data.total},${data.completed},${pending},${percent}%\n`;
+                });
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast(`${reportType.toUpperCase()} Report successfully downloaded.`, "success");
+        }
+
+        // ==========================================
+        // FUNGSI MUAT TURUN REKOD MENGIKUT UNIT/FOLDER KE EXCEL (XLSX)
+        // DINAITAF DENGAN FORMATTING, AUTO-WIDTH, FREEZE & WRAP TEXT
+        // ==========================================
+        function downloadUnitExcel() {
+            if (!filteredData || filteredData.length === 0) {
+                showToast("No records to download in this folder.", "error");
+                return;
+            }
+
+            // 1. Sediakan Struktur Data Array (Header + Data)
+            const headers = ["No.", "Import Date", "Material", "Editor", "Unit", "Status", "Date Completed"];
+            const data = [headers];
+
+            filteredData.forEach(row => {
+                let bahanClean = row.Bahan ? row.Bahan : '';
+                let dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
+                let editorClean = row.Editor || '-';
+                let unitClean = row.Unit || '-';
+                let statusClean = row.Status || '-';
+                let dateSelesai = row.Date || '-';
+                
+                data.push([
+                    row.Bil, 
+                    dateHarvest, 
+                    bahanClean, 
+                    editorClean, 
+                    unitClean, 
+                    statusClean, 
+                    dateSelesai
+                ]);
+            });
+
+            // 2. Bina Worksheet menggunakan SheetJS
+            const ws = XLSX.utils.aoa_to_sheet(data);
+
+            // 3. Auto Column Width (Ambil pjg teks maksimum utk setiap kolum)
+            const colWidths = headers.map(() => 0);
+            data.forEach(row => {
+                row.forEach((cell, i) => {
+                    const cellLength = cell ? String(cell).length : 0;
+                    if (cellLength > colWidths[i]) {
+                        colWidths[i] = cellLength;
+                    }
+                });
+            });
+
+            // Set Auto Width (Had maksimum 50 untuk elak terlalu lebar)
+            ws['!cols'] = colWidths.map(w => ({ wch: Math.min(w + 2, 50) }));
+
+            // 4. Freeze Header Row (Baris pertama tak hilang bila scroll)
+            ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+            // 5. Masukkan Formatting / Style (Bold, Center, Warna, Wrap Text)
+            for (let R = 0; R < data.length; ++R) {
+                for (let C = 0; C < headers.length; ++C) {
+                    const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
+                    if (!ws[cellRef]) continue;
+
+                    if (R === 0) {
+                        // Style untuk Header Row
+                        ws[cellRef].s = {
+                            font: { bold: true, color: { rgb: "000000" } },
+                            fill: { fgColor: { rgb: "E2E8F0" } }, // Warna Light Grey
+                            alignment: { horizontal: "center", vertical: "center", wrapText: true }
+                        };
+                    } else {
+                        // Style untuk Baris Data Biasa
+                        let align = { vertical: "top" };
+                        
+                        // Kolum Material (C = 2) perlu wrap text supaya kemas
+                        if (C === 2) {
+                            align.wrapText = true;
+                        } 
+                        // Kolum Nombor, Tarikh, Unit, Status diposisikan ke tengah (Center)
+                        else if (C === 0 || C === 1 || C === 4 || C === 5 || C === 6) {
+                            align.horizontal = "center";
+                        }
+                        
+                        ws[cellRef].s = { alignment: align };
+                    }
+                }
+            }
+
+            // 6. Bina Workbook dan Download Excel Fail (.xlsx)
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Records Data");
+            
+            let folderName = activeUnit === 'Complete' ? 'Completed_Archive' : (activeUnit === 'Item' ? 'New_Unassigned' : activeUnit);
+            const fileName = `Records_${folderName}_${new Date().toISOString().slice(0,10)}.xlsx`;
+            
+            XLSX.writeFile(wb, fileName);
+            showToast(`${folderName} records successfully downloaded to Excel.`, "success");
+        }
+
+        function showToast(msg, type = "success") {
+            DOM.toastMsg.textContent = msg;
+            DOM.toast.style.backgroundColor = type === 'success' ? '#0f172a' : '#b91c1c';
+            DOM.toast.classList.add('toast-active');
+            DOM.toast.classList.remove('toast-enter');
+            setTimeout(() => {
+                DOM.toast.classList.remove('toast-active');
+                DOM.toast.classList.add('toast-enter');
+            }, 3000);
+        }
+
+        let clockInterval;
+        function updateTimestamp() {
+            if (clockInterval) return; 
+            const el = document.getElementById('clock-text');
+            if (!el) return;
+            
+            function tick() {
+                const now = new Date();
+                const date = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+                const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                el.textContent = `${date} ${time}`;
+            }
+            
+            tick();
+            clockInterval = setInterval(tick, 1000);
+        }
+
+        function generateMockData(count) {
+            const sampleData = `Error list:\n[{"tag":"100$e","description":"Missing sub field 100$e - Relator term"}]\nLEADER 01071nam a2200301 a 4500001 28431003 NIH005 20250528102818.0008 250324t20012001enka 001 0 eng d020 $a0521770297$qpaperback020 $a9780521770293$qpaperback040 $aNIH$beng$cNIH$erda060 $aW 84.1090 14$aW 84.1$b.D291 2001100 10$aHunnink,M.G. Myriam245 00$aDecision making in health and medicine : $bIntegrating evidence and values /$cM.G. Myriam Hunink, Paul P. Glasziou, Joanna E. Siegel, Jane C. Weeks, Joseph S.Pliskin, Arthur S. Elstein, Milton C. Weinstein.264 1$aCambridge :$bCambridge University Press, $c2001264 4$c©2001300 $axvi, 388 pages :$billustrations ;$c25 cm.$e1 CD-ROM (4 3/4 in.)336 $atext$2rdacontent337 $aunmediated$2rdamedia338 $avolume$2rdacarrier504 $a Includes bibliographical references and index700 1 $aGlasziou, Paul P.856 $uhttps://library.nih.gov.my942 $2NLM$n0$cOS999 $c28431$d28431999 $aBK00078309`;
+            return Array.from({length: count}, (_, i) => {
+                const isComplete = Math.random() > 0.8;
+                return {
+                    RowIdx: i + 2, Bil: i + 1, "DATE HARVEST": `0${Math.floor(Math.random() * 9) + 1}/03/2026`, 
+                    Bahan: sampleData, Editor: listEditors[Math.floor(Math.random() * listEditors.length)],
+                    Unit: listUnits[Math.floor(Math.random() * listUnits.length)], Status: isComplete ? "Complete" : "Pending", Date: isComplete ? "08/03/2026" : ""
+                };
+            }).reverse(); 
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
