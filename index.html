@@ -441,7 +441,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz4pIFAAf76qRAyZPeQoHoDZbpg14l2Dkyy6C64wJ_OyoWTjI0KBdluedq25NOaYpsK_g/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyHANfbp0Pu76Bspfcbu6DwhoKtKTwjJnYyubRqiD3HjPZg5LXSLn6FqBfTFxIK4BSxDw/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -829,17 +829,16 @@
                 return new Promise(r => setTimeout(() => r(true), 500)); 
             }
             try {
-                // GUNA TEXT/PLAIN DAN REDIRECT: FOLLOW UNTUK BYPASS CORS DI GITHUB PAGES
-                const res = await fetch(GAS_WEB_APP_URL, {
+                // GUNA MODE 'no-cors' UNTUK BYPASS CORS SECARA MUTLAK (API AKAN TERIMA TAPI RESPON DIABAIKAN)
+                await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
-                    redirect: 'follow',
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8'
                     },
                     body: JSON.stringify({ action: 'update', rowIdx, status, date, editor, unit })
                 });
-                const data = await res.json();
-                return data.status === 'success';
+                return true; // Anggap berjaya kerana no-cors tidak memulangkan payload yang boleh dibaca
             } catch(e) { return false; }
         }
 
@@ -893,42 +892,48 @@
                 if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
                     await new Promise(r => setTimeout(r, 1500));
                     showToast("Import Simulation Successful.", "success");
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 500);
                 } else {
-                    // GUNA TEXT/PLAIN DAN REDIRECT: FOLLOW UNTUK BYPASS CORS DI GITHUB PAGES
-                    const res = await fetch(GAS_WEB_APP_URL, {
+                    // GUNA MODE 'no-cors' UNTUK BYPASS CORS GITHUB PAGES
+                    await fetch(GAS_WEB_APP_URL, {
                         method: 'POST',
-                        redirect: 'follow',
+                        mode: 'no-cors',
                         headers: {
                             'Content-Type': 'text/plain;charset=utf-8'
                         },
                         body: JSON.stringify({ action: 'import_drive' })
                     });
-                    const data = await res.json();
                     
-                    if(data.status === 'success') {
-                        showToast(data.message, "success");
-                        const response = await fetch(GAS_WEB_APP_URL);
-                        const resJson = await response.json();
-                        if(resJson.status === 'success') {
-                            tableData = resJson.data.map(r => {
-                                r.Editor = normalizeEditorName(r.Editor);
-                                r.Status = normalizeStatus(r.Status);
-                                r.Unit = normalizeUnit(r.Unit);
-                                return r;
-                            });
-                            if(activeUnit) applyFilters(); 
-                            else showDashboard();
+                    // Memandangkan respons 'no-cors' tak boleh dibaca, kita tunggu 5 saat 
+                    // dan panggil semula GET request (kerana GET tiada isu CORS) untuk kemaskini jadual
+                    setTimeout(async () => {
+                        try {
+                            const response = await fetch(GAS_WEB_APP_URL);
+                            const resJson = await response.json();
+                            if(resJson.status === 'success') {
+                                tableData = resJson.data.map(r => {
+                                    r.Editor = normalizeEditorName(r.Editor);
+                                    r.Status = normalizeStatus(r.Status);
+                                    r.Unit = normalizeUnit(r.Unit);
+                                    return r;
+                                });
+                                if(activeUnit) applyFilters(); 
+                                else showDashboard();
+                                showToast("Import process executed. Data refreshed.", "success");
+                            }
+                        } catch(err) {
+                            showToast("Refresh failed after import.", "error");
+                        } finally {
+                            loader.style.opacity = '0';
+                            setTimeout(() => loader.style.display = 'none', 500);
                         }
-                    } else {
-                        showToast(data.message, "error");
-                    }
+                    }, 5000); // Masa menunggu 5 saat sebelum jadual ditarik semula
                 }
             } catch(e) {
-                // TAMPILKAN MESEJ ERROR SEBENAR JIKA GAGAL
-                showToast("System error: " + e.message, "error");
-            } finally {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
+                showToast("System error: " + e.message, "error");
             }
         });
 
