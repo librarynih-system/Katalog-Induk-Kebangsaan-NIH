@@ -829,11 +829,18 @@
                 return new Promise(r => setTimeout(() => r(true), 500)); 
             }
             try {
-                // TIADA custom headers, TIADA mode no-cors
-                // Pelayar web akan menghantar secara default sebagai "text/plain" (Simple Request)
-                const res = await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'update', rowIdx, status, date, editor, unit })
+                // TUKAR KEPADA GET: Masukkan semua data ke dalam URL parameter
+                const urlParams = new URLSearchParams({
+                    action: 'update',
+                    rowIdx: rowIdx,
+                    status: status,
+                    date: date,
+                    editor: editor,
+                    unit: unit
+                });
+                
+                const res = await fetch(`${GAS_WEB_APP_URL}?${urlParams.toString()}`, {
+                    method: 'GET'
                 });
                 const data = await res.json();
                 return data.status === 'success';
@@ -893,11 +900,9 @@
                     loader.style.opacity = '0';
                     setTimeout(() => loader.style.display = 'none', 500);
                 } else {
-                    // TIADA custom headers, TIADA mode no-cors
-                    // Pelayar web akan menghantar secara default sebagai "text/plain" (Simple Request)
-                    const res = await fetch(GAS_WEB_APP_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'import_drive' })
+                    // TUKAR KEPADA GET: Masukkan action ke dalam URL parameter
+                    const res = await fetch(`${GAS_WEB_APP_URL}?action=import_drive`, {
+                        method: 'GET'
                     });
                     
                     const data = await res.json();
