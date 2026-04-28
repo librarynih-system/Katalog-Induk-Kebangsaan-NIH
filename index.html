@@ -451,6 +451,11 @@
         let activeUnit = null; 
         let dynamicEditors = [];
         
+        // AUTO-REFRESH & INTERACTION FLAGS
+        let isSaving = false;
+        let isImporting = false;
+        let isPolling = false;
+        
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
         
         // SENARAI 10 NAMA RASMI SAHAJA (DITAMBAH DENGAN SISTEM & LIBRARY ADMIN)
@@ -553,6 +558,53 @@
             } finally {
                 DOM.appLoader.style.opacity = '0';
                 setTimeout(() => DOM.appLoader.style.display = 'none', 500);
+                
+                // MULA PROSES AUTO-REFRESH BACKGROUND SETIAP 5 SAAT (5000ms)
+                setInterval(pollBackgroundData, 5000);
+            }
+        }
+        
+        // FUNGSI BACKGROUND AUTO-REFRESH TANPA MENGGANGGU UI
+        async function pollBackgroundData() {
+            // HALANG refresh jika user sedang Save, Import, atau jika kotak Dropdown (select) sedang difokuskan
+            if (isPolling || isSaving || isImporting || (document.activeElement && document.activeElement.closest('#table-body'))) {
+                return;
+            }
+            
+            isPolling = true;
+            try {
+                // Menggunakan timestamp 't=' untuk mengelak memori pelayar web (cache buster)
+                const response = await fetch(`${GAS_WEB_APP_URL}?action=get_all&t=${new Date().getTime()}`);
+                const resJson = await response.json();
+                
+                if (resJson.status === 'success') {
+                    const newDataFormatted = resJson.data.map(r => {
+                        r.Editor = normalizeEditorName(r.Editor);
+                        r.Status = normalizeStatus(r.Status);
+                        r.Unit = normalizeUnit(r.Unit);
+                        return r;
+                    });
+                    
+                    const currentDataStr = JSON.stringify(tableData);
+                    const newDataStr = JSON.stringify(newDataFormatted);
+                    
+                    // JIKA ADA PERUBAHAN DATA, barulah kita update memori tableData
+                    if (currentDataStr !== newDataStr) {
+                        tableData = newDataFormatted;
+                        
+                        updateKPIs();
+                        updateFolderCounts();
+                        document.getElementById('total-loaded').textContent = tableData.length.toLocaleString();
+                        
+                        if (activeUnit) {
+                            applyFilters(); 
+                        }
+                    }
+                }
+            } catch (err) {
+                // Ralat dihiraukan (fail silently) di sebalik skrin supaya tak ganggu pengguna
+            } finally {
+                isPolling = false;
             }
         }
 
@@ -574,16 +626,9 @@
             DOM.listView.classList.remove('hidden');
             DOM.listView.classList.add('flex');
             
-            let folderTitle = '';
-            if (unitName === 'Item') folderTitle = 'ITEM (New/Unassigned)';
-            else if (unitName === 'Complete') folderTitle = 'COMPLETED ARCHIVE';
-            else folderTitle = `Unit ${unitName}`;
-            
-            document.getElementById('current-unit-title').textContent = `Folder: ${folderTitle}`;
-            
             DOM.search.value = '';
             DOM.filterEditor.value = 'All';
-            applyFilters();
+            applyFilters(); // Menjalankan fungsi ini akan memanggil renderTable yang mengemaskini tajuk & jadual
         }
 
         function updateKPIs() {
@@ -661,6 +706,23 @@
                 return matchSearch && matchEditor && matchUnit;
             });
             
+            // FUNGSI SUSUNAN MENGIKUT TARIKH TERKINI HANYA UNTUK FOLDER COMPLETE
+            if (activeUnit === 'Complete') {
+                filteredData.sort((a, b) => {
+                    const parseDate = (dStr) => {
+                        if (!dStr || dStr === '-') return 0;
+                        let parts = dStr.split('/');
+                        if(parts.length === 3) return new Date(parts[2], parts[1]-1, parts[0]).getTime();
+                        return 0;
+                    };
+                    let valA = parseDate(a.Date);
+                    let valB = parseDate(b.Date);
+                    
+                    if (valB !== valA) return valB - valA; // Tarikh terbaru berada di atas (Descending)
+                    return b.RowIdx - a.RowIdx; // Jika tarikh sama, ambil rekod yang paling lambat diproses
+                });
+            }
+
             currentPage = 1;
             renderTable();
         }
@@ -669,6 +731,31 @@
         DOM.filterEditor.addEventListener('change', applyFilters);
 
         function renderTable() {
+            // SIMPAN kedudukan scroll semasa supaya jadual tak berlompat ke atas secara automatik
+            const tableContainer = document.querySelector('.overflow-auto.bg-white');
+            const currentScroll = tableContainer ? tableContainer.scrollTop : 0;
+
+            // KIRA JUMLAH REKOD KESELURUHAN DALAM FOLDER SEMASA (TANPA DIPENGARUHI OLEH FUNGSI SEARCH)
+            let folderTotal = tableData.filter(row => {
+                const isComp = (row.Status === 'Complete');
+                const isFragment = !(row.Bahan && row.Bahan.includes('LEADER'));
+                if (activeUnit === 'Complete') return isComp;
+                if (activeUnit === 'Item') return !isComp && !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                return !isComp && !isFragment && (row.Unit === activeUnit);
+            }).length;
+
+            // KEMASKINI TAJUK BERSAMA JUMLAH FOLDER SECARA LANGSUNG (LIVE)
+            let baseTitle = '';
+            if (activeUnit === 'Item') baseTitle = 'ITEM (New/Unassigned)';
+            else if (activeUnit === 'Complete') baseTitle = 'COMPLETED ARCHIVE';
+            else baseTitle = `Unit ${activeUnit}`;
+            
+            const titleEl = document.getElementById('current-unit-title');
+            if (titleEl) {
+                // Dimasukkan ke dalam span biru pudar untuk design harmoni
+                titleEl.innerHTML = `Folder: ${baseTitle} <span class="text-blue-600 text-xl ml-1 tracking-normal font-bold">(${folderTotal.toLocaleString()})</span>`;
+            }
+
             const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
             if (currentPage > totalPages) currentPage = totalPages;
 
@@ -727,6 +814,9 @@
             DOM.btnPrev.disabled = currentPage === 1;
             DOM.btnNext.disabled = currentPage === totalPages || totalPages === 0;
 
+            // KEMBALIKAN posisi scroll asal (Mencegah jadual melompat ke atas ketika auto-refresh)
+            if (tableContainer) tableContainer.scrollTop = currentScroll;
+            
             lucide.createIcons();
         }
 
@@ -741,6 +831,8 @@
 
         DOM.tbody.addEventListener('change', async (e) => {
             if (e.target.tagName.toLowerCase() === 'select') {
+                isSaving = true; // MENGUNCI proses polling sekiranya editor sedang memilih dropdown
+                
                 const select = e.target;
                 const tr = select.closest('tr');
                 const rowIdx = tr.dataset.rowidx; 
@@ -748,7 +840,7 @@
                 const field = select.dataset.field; 
                 
                 const record = tableData.find(r => String(r.RowIdx) === String(rowIdx));
-                if(!record) return;
+                if(!record) { isSaving = false; return; }
 
                 const statusSelect = tr.querySelector('[data-field="Status"]');
                 const editorSelect = tr.querySelector('[data-field="Editor"]');
@@ -821,6 +913,8 @@
                     select.disabled = false;
                     showToast(`Failed to update Record #${bilDisplay}.`, "error");
                 }
+                
+                isSaving = false; // MELEPASKAN KUNCI proses polling
             }
         });
 
@@ -886,6 +980,7 @@
         }
 
         document.getElementById('btn-import').addEventListener('click', async () => {
+            isImporting = true; // MENGUNCI proses auto-refresh dari mengganggu proses import
             closeModal('admin-modal'); 
             const loader = document.getElementById('app-loader');
             loader.querySelector('h3').textContent = "Synchronizing Errors...";
@@ -930,6 +1025,7 @@
             } finally {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
+                isImporting = false; // MELEPASKAN KUNCI 
             }
         });
 
