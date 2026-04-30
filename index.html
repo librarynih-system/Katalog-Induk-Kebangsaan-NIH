@@ -165,7 +165,7 @@
                         <i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i> Statistical Report
                     </button>
                     <button id="btn-admin-panel" class="bg-navy hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg">
-                        <i data-lucide="folder-sync" class="w-4 h-4 text-emerald-400"></i> Import Data
+                        <i data-lucide="folder-sync" class="w-4 h-4 text-emerald-400"></i> Admin Panel
                     </button>
                 </div>
             </div>
@@ -435,13 +435,24 @@
                         <i data-lucide="hard-drive-download" class="w-5 h-5"></i> START IMPORT NOW
                     </button>
                 </div>
+                
+                <!-- KOTAK TAMBAHAN BUTANG ADMIN OVERRIDE (TIDAK MENGGANGGU UI LUAR) -->
+                <div class="bg-amber-50/50 border border-amber-200/50 rounded-xl p-5 flex flex-col gap-3 mt-2">
+                    <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+                        <i data-lucide="unlock" class="w-5 h-5 text-amber-600"></i> Unlock Completed Records
+                    </h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Membenarkan Admin untuk mengubahsuai rekod yang telah pun berstatus "Complete" atau dikunci.</p>
+                    <button id="btn-admin-mode" class="mt-3 bg-amber-500 hover:bg-amber-600 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                        <i data-lucide="key" class="w-5 h-5"></i> ENABLE ADMIN EDIT MODE
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBdYJzIgTZcBBHmynRD7Hj9gitmArJZlNWh2BvCkKsEXu--XtZW09ErXpjZFm_p967/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz-_Gq5T2o1op-EKu93Oo1tqPv0ZttzfcyZlrvJ7wwLjO7sK7QCcSOZ64y1TJfOvUN-CQ/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -455,6 +466,7 @@
         let isSaving = false;
         let isImporting = false;
         let isPolling = false;
+        let isAdminEditMode = false; // FLAG UNTUK OVERRIDE ADMIN
         
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
         
@@ -768,7 +780,12 @@
                 const statusClass = isComplete ? 'text-emerald-700 bg-emerald-50 border-emerald-200 focus:ring-emerald-500/30' : 'text-red-700 bg-red-50 border-red-200 focus:ring-red-500/30';
                 const dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
                 
-                const isEditorLocked = row.Editor && row.Editor !== 'Sistem';
+                // JIKA DALAM ADMIN EDIT MODE, BIARKAN KOTAK DROPDOWN BOLEH DIUBAH WALAUPUN RECORD TELAH COMPLETE
+                let isEditorLocked = false;
+                if (!isAdminEditMode) {
+                    isEditorLocked = row.Editor && row.Editor !== 'Sistem';
+                }
+
                 const editorSelectClass = isEditorLocked 
                     ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner" 
                     : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
@@ -867,7 +884,8 @@
                 tr.style.opacity = '0.5';
                 select.disabled = true; 
 
-                const success = await saveRecord(rowIdx, newStatus, newDate, newEditor, newUnit);
+                // LALUKAN ISADMINEDITMODE BAGI MEMBENARKAN OVERRIDE
+                const success = await saveRecord(rowIdx, newStatus, newDate, newEditor, newUnit, isAdminEditMode);
 
                 if (success) {
                     tr.style.opacity = '1';
@@ -878,7 +896,7 @@
                     record.Editor = normalizeEditorName(newEditor);
                     record.Unit = normalizeUnit(newUnit);
                     
-                    if (field === 'Editor' && record.Editor !== 'Sistem') {
+                    if (field === 'Editor' && record.Editor !== 'Sistem' && !isAdminEditMode) {
                         editorSelect.disabled = true;
                         editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner";
                         populateFilters();
@@ -918,7 +936,8 @@
             }
         });
 
-        async function saveRecord(rowIdx, status, date, editor, unit) {
+        // TAMBAH PARAMETER adminOverride UNTUK DIHANTAR KE BACKEND
+        async function saveRecord(rowIdx, status, date, editor, unit, adminOverride = false) {
             if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
                 return new Promise(r => setTimeout(() => r(true), 500)); 
             }
@@ -930,7 +949,8 @@
                     status: status,
                     date: date,
                     editor: editor,
-                    unit: unit
+                    unit: unit,
+                    adminOverride: adminOverride // Flag baharu
                 });
                 
                 const res = await fetch(`${GAS_WEB_APP_URL}?${urlParams.toString()}`, {
@@ -1027,6 +1047,26 @@
                 setTimeout(() => loader.style.display = 'none', 500);
                 isImporting = false; // MELEPASKAN KUNCI 
             }
+        });
+
+        // FUNGSI BAHARU UNTUK TOGGLE ADMIN EDIT MODE
+        document.getElementById('btn-admin-mode').addEventListener('click', () => {
+            isAdminEditMode = !isAdminEditMode;
+            const btn = document.getElementById('btn-admin-mode');
+            if(isAdminEditMode) {
+                btn.classList.replace('bg-amber-500', 'bg-red-600');
+                btn.classList.replace('hover:bg-amber-600', 'hover:bg-red-700');
+                btn.innerHTML = '<i data-lucide="lock" class="w-5 h-5"></i> DISABLE ADMIN EDIT MODE';
+                showToast("Admin Edit Mode Enabled. You can now edit completed records.", "success");
+            } else {
+                btn.classList.replace('bg-red-600', 'bg-amber-500');
+                btn.classList.replace('hover:bg-red-700', 'hover:bg-amber-600');
+                btn.innerHTML = '<i data-lucide="key" class="w-5 h-5"></i> ENABLE ADMIN EDIT MODE';
+                showToast("Admin Edit Mode Disabled.", "success");
+            }
+            lucide.createIcons();
+            closeModal('admin-modal');
+            renderTable(); // Re-render table supaya Editor tidak lagi berstatus 'disabled'
         });
 
         function unlockEditor(tdElement) {
