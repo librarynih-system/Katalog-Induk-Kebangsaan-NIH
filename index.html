@@ -686,7 +686,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwzfpiICcUGrOZn4K-7FFZXTfOCuYaFyV7lKOgdcmq2Gsq1M_M92fy3wAFXHIaedCly5w/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzMM7Vofsn5avIj4YWED7vKNGy6QHVrZ-i_9f_f_AXusiX8uPkRGUSKQJveK5JicYHtOw/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -786,6 +786,13 @@
             if (u === 'UPK' || (u.includes('UPK') && !u.includes('UPKK'))) return 'UPK';
             if (u === 'UPMD' || u.includes('UPMD')) return 'UPMD';
             return 'Auto Import';
+        }
+
+        // FUNGSI BAHARU: Kenal pasti rekod sihat (Sokong format LEADER, =LDR, dan Error list)
+        function isValidRecord(bahan) {
+            if (!bahan) return false;
+            let text = bahan.toUpperCase();
+            return text.includes('LEADER') || text.includes('=LDR') || text.includes('LDR ') || text.includes('ERROR LIST:');
         }
 
         function mapIncomingRecord(r) {
@@ -912,7 +919,7 @@
             unitDash.classList.add('grid');
 
             let unitRecords = tableData.filter(r => {
-                const isFragment = !(r.Bahan && r.Bahan.includes('LEADER'));
+                const isFragment = !isValidRecord(r.Bahan);
                 if (isFragment) return false;
                 if (unitName === 'Item') return (r.Unit !== 'UPK' && r.Unit !== 'UPKK' && r.Unit !== 'UPMD');
                 return r.Unit === unitName;
@@ -933,7 +940,7 @@
         }
 
         function updateKPIs() {
-            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || (r.Bahan && r.Bahan.includes('LEADER')));
+            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || isValidRecord(r.Bahan));
             
             const total = validData.length;
             const complete = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
@@ -952,7 +959,7 @@
             let upk = 0, upkk = 0, upmd = 0, item = 0, comp = 0;
             
             tableData.forEach(r => {
-                const isFragment = !(r.Bahan && r.Bahan.includes('LEADER'));
+                const isFragment = !isValidRecord(r.Bahan);
 
                 if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') {
                     comp++;
@@ -996,7 +1003,7 @@
                 const matchEditor = editor === 'All' || row.Editor === editor;
                 
                 let matchUnit = false;
-                const isFragment = !(row.Bahan && row.Bahan.includes('LEADER'));
+                const isFragment = !isValidRecord(row.Bahan);
 
                 if (activeUnit === 'Complete') {
                     matchUnit = (row.Status === 'Complete' || row.Status === 'Awaiting approval' || row.Status === 'Approve'); 
@@ -1037,7 +1044,7 @@
             const currentScroll = tableContainer ? tableContainer.scrollTop : 0;
 
             let folderTotal = tableData.filter(row => {
-                const isFragment = !(row.Bahan && row.Bahan.includes('LEADER'));
+                const isFragment = !isValidRecord(row.Bahan);
                 if (activeUnit === 'Complete') return (row.Status === 'Complete' || row.Status === 'Awaiting approval' || row.Status === 'Approve');
                 if (activeUnit === 'Item') return !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
                 return !isFragment && (row.Unit === activeUnit);
@@ -1630,7 +1637,7 @@
 
         function generateStatistics() {
             const container = document.getElementById('stats-container');
-            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || (r.Bahan && r.Bahan.includes('LEADER')));
+            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || isValidRecord(r.Bahan));
             const totalRecords = validData.length;
             
             if (totalRecords === 0) {
@@ -1791,7 +1798,7 @@
 
         function downloadStatsCSV() {
             const reportType = document.getElementById('report-type-select').value;
-            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || (r.Bahan && r.Bahan.includes('LEADER')));
+            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || isValidRecord(r.Bahan));
             const totalRecords = validData.length;
             
             if (totalRecords === 0) {
