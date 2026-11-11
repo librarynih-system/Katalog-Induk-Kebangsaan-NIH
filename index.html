@@ -1517,13 +1517,17 @@
             const selectElement = tdElement.querySelector('select');
             if(selectElement && selectElement.disabled) {
                 selectElement.disabled = false;
-                selectElement.className = "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
+                selectElement.className = "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50 text-center";
                 showToast("Editor lock temporarily opened.", "success");
             }
         }
 
         function formatBahanColumn(text) {
             if(!text) return '-';
+            
+            // Buang tanda ' di awal string jika ada (elak paparan serabut)
+            if (text.startsWith("'")) text = text.substring(1);
+
             let html = '';
             
             const hasErrorList = text.toLowerCase().includes('error list:');
@@ -1552,6 +1556,9 @@
             }
             
             let leaderIndex = text.indexOf('LEADER');
+            if (leaderIndex === -1) leaderIndex = text.indexOf('=LDR');
+            if (leaderIndex === -1) leaderIndex = text.indexOf('LDR ');
+            
             let marcText = leaderIndex !== -1 ? text.substring(leaderIndex) : text;
             marcText = marcText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             
@@ -1573,53 +1580,40 @@
         }
 
         function formatMARCForDisplay(text) {
-            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            let dynamicErrorTags = [];
+            // 1. Buang tanda ' di awal string jika ada (mengelakkan paparan ralat formula Google Sheet)
+            if (text.startsWith("'")) text = text.substring(1);
             
-            let jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            if (jsonMatch) {
-                try {
-                    const jsonStr = jsonMatch[0].replace(/&quot;/g, '"');
-                    const errors = JSON.parse(jsonStr);
-                    errors.forEach(e => {
-                        if(e.tag) {
-                            const match = e.tag.match(/^(\d{3})/);
-                            if(match) dynamicErrorTags.push(match[1]);
-                        }
-                    });
-                } catch(e) {}
+            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            let errorBoxHtml = '';
+            
+            // 2. Ekstrak dan format "Error list:" jika wujud di dalam teks
+            const errorListRegex = /Error list:\s*(\[[\s\S]*?\])?\s*/i;
+            let errorMatch = safeText.match(errorListRegex);
+            
+            if (errorMatch) {
+                let jsonStr = errorMatch[1];
+                if (jsonStr) {
+                    try {
+                        const errors = JSON.parse(jsonStr.replace(/&quot;/g, '"'));
+                        let errorDetails = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
+                        errorBoxHtml = `<div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg shadow-inner block">${errorDetails}</div>`;
+                    } catch(e) {}
+                }
+                // Padam bahagian ralat dari teks asal supaya tak berulang
+                safeText = safeText.replace(errorListRegex, '').trim();
             }
 
-            let leaderMatches = [];
-            safeText = safeText.replace(/(LEADER\s.{24})/g, (match) => {
-                leaderMatches.push(match);
-                return `\n___LEADER_${leaderMatches.length - 1}___\n`;
+            // 3. Kemaskan teks MARC secara natural macam dalam Google Sheet
+            let lines = safeText.split('\n');
+            let formattedLines = lines.map(line => {
+                // Highlight Tag Utama (cth: =LDR, =001, 100) di awal baris
+                line = line.replace(/^(=?[A-Za-z0-9]{3})\s/, '<span class="text-blue-600 font-bold mr-1">$1</span> ');
+                // Highlight Subfield (cth: $a, $b)
+                line = line.replace(/(\$[a-z0-9])/gi, '<span class="text-emerald-600 font-bold mx-px">$1</span>');
+                return line;
             });
             
-            const commonTags = ['001','003','005','008','020','022','040','050','060','082','090','100','110','130','245','246','250','260','264','300','336','337','338','490','500','504','505','520','650','651','700','710','830','856','942','999'];
-            const tagRegex = new RegExp(`([^\\s\\n])(${commonTags.join('|')})(?=[ \\t]|\\d{1,2}\\$|\\$)`, 'g');
-            safeText = safeText.replace(tagRegex, '$1\n$2');
-            
-            leaderMatches.forEach((match, index) => {
-                safeText = safeText.replace(`___LEADER_${index}___`, match);
-            });
-            
-            safeText = safeText.replace(/Error list:\s*([\s\S]*?)(?=LEADER|$)/i, (match, errorDetails) => {
-                return `<span class="error-box text-rose-600 bg-rose-50 px-2 py-1 rounded-md font-semibold border border-rose-200 block my-2 shadow-sm">Error list:\n${errorDetails.trim()}</span>\n`;
-            });
-            
-            const specificTags = ['100', '110', '245', '650', '700'];
-            safeText = safeText.replace(/^([A-Z]+|\d{3})(?=\s)/gm, (match, tag) => {
-                if (dynamicErrorTags.includes(tag)) {
-                    return `<span class="bg-red-500 text-white px-1.5 py-0.5 rounded shadow-sm font-bold" title="Error Tag">${tag}</span>`;
-                } else if (specificTags.includes(tag)) {
-                    return `<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300 font-bold" title="Main Tag">${tag}</span>`;
-                }
-                return `<span class="text-blue-600 font-bold">${tag}</span>`;
-            });
-
-            safeText = safeText.replace(/(\$[a-z0-9])/g, '<span class="text-emerald-600 font-bold">$1</span>');
-            return safeText.replace(/\n{2,}/g, '\n').trim();
+            return errorBoxHtml + formattedLines.join('\n');
         }
 
         function viewDetails(rowIdx) {
