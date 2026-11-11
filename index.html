@@ -686,7 +686,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyjRG3-CiGEYKnC64ccM2S3rHfb1R68aa6kKvhdcXLESkA-RycDnyuKswRlj65Usf3XiA/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwzfpiICcUGrOZn4K-7FFZXTfOCuYaFyV7lKOgdcmq2Gsq1M_M92fy3wAFXHIaedCly5w/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -705,7 +705,7 @@
         
         const listEditors = [
             "Sistem", "Library admin", 
-            "MAZIDAH ABD. RAHMAN", 
+            "MAZIDAH ABD RAHMAN", 
             "NORHAYATI MAJID", 
             "NURFATIHAH S BAHARUDDIN", 
             "NOR FAZILAH ABDULLAH ZAWAWI", 
@@ -713,7 +713,7 @@
             "NOOR SAKINAH IBARAHIM", 
             "ANDRIA GANA ANAK GIRI", 
             "NOOREYZAN MANANGIN", 
-            "SHAFIQ S. BAHARUDDIN",
+            "SHAFIQ S BAHARUDDIN",
             "MAIZAITUL HUSNA ABDUL HALIM"
         ];
         
@@ -741,7 +741,7 @@
             if (ed === '' || ed === 'SISTEM' || ed === 'AUTO IMPORT') return 'Sistem';
             if (ed === 'LIBRARY ADMIN') return 'Library admin';
 
-            if (ed.includes('MAZIDAH')) return 'MAZIDAH ABD. RAHMAN';
+            if (ed.includes('MAZIDAH')) return 'MAZIDAH ABD RAHMAN';
             if (ed.includes('NORHAYATI')) return 'NORHAYATI MAJID';
             if (ed.includes('NURFATIHAH')) return 'NURFATIHAH S BAHARUDDIN';
             if (ed.includes('FAZILAH')) return 'NOR FAZILAH ABDULLAH ZAWAWI';
@@ -749,7 +749,7 @@
             if (ed.includes('SAKINAH')) return 'NOOR SAKINAH IBARAHIM';
             if (ed.includes('ANDRIA')) return 'ANDRIA GANA ANAK GIRI';
             if (ed.includes('NOOREYZAN')) return 'NOOREYZAN MANANGIN';
-            if (ed.includes('SHAFIQ')) return 'SHAFIQ S. BAHARUDDIN';
+            if (ed.includes('SHAFIQ')) return 'SHAFIQ S BAHARUDDIN';
             if (ed.includes('MAIZAITUL')) return 'MAIZAITUL HUSNA ABDUL HALIM';
 
             return ed; 
@@ -1077,9 +1077,11 @@
                 
                 let isEditorLocked = false;
                 let isStatusLocked = false;
+                let isUnitLocked = false;
                 if (!isAdminEditMode) {
                     isEditorLocked = (row.Editor && row.Editor !== 'Sistem') || (statusClean !== 'Pending');
                     isStatusLocked = (statusClean !== 'Pending');
+                    isUnitLocked = (statusClean !== 'Pending');
                 }
 
                 let statusOptionsHTML = '';
@@ -1102,14 +1104,16 @@
                 }
 
                 const editorSelectClass = isEditorLocked 
-                    ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner" 
-                    : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
+                    ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center" 
+                    : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50 text-center";
 
-                const defaultSelectClass = "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
+                const unitSelectClass = isUnitLocked 
+                    ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center" 
+                    : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50 text-center";
 
                 const finalStatusSelectClass = isStatusLocked 
-                    ? "w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner"
-                    : `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass}`;
+                    ? "w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner text-center"
+                    : `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass} text-center`;
 
                 const displayNo = startIndex + index + 1;
 
@@ -1130,7 +1134,7 @@
                         </select>
                     </td>
                     <td class="px-5 py-5 align-top text-center">
-                        <select class="${defaultSelectClass}" data-field="Unit">
+                        <select class="${unitSelectClass}" data-field="Unit" ${isUnitLocked ? 'disabled' : ''}>
                             ${generateOptions(listUnits, row.Unit)}
                         </select>
                     </td>
@@ -1209,9 +1213,9 @@
                     
                     if (!isAdminEditMode && newStatus !== 'Pending') {
                         statusSelect.innerHTML = `<option value="${newStatus}" selected>${newStatus}</option>`;
-                        statusSelect.className = `w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner`;
+                        statusSelect.className = `w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner text-center`;
                     } else {
-                        statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newClass}`;
+                        statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newClass} text-center`;
                     }
                     dateCol.textContent = newDate || '-';
                     
@@ -1232,9 +1236,11 @@
                     tr.style.opacity = '1';
                     
                     if (!isAdminEditMode && newStatus !== 'Pending') {
-                        // Kunci editor juga bila status menjadi Awaiting approval
+                        // Kunci editor dan unit bila status bertukar
                         editorSelect.disabled = true;
-                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner";
+                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
+                        unitSelect.disabled = true;
+                        unitSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
                         statusSelect.disabled = true;
                     } else {
                         select.disabled = false;
@@ -1247,7 +1253,7 @@
                     
                     if (field === 'Editor' && record.Editor !== 'Sistem' && !isAdminEditMode) {
                         editorSelect.disabled = true;
-                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner";
+                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
                         populateFilters();
                     }
                     
