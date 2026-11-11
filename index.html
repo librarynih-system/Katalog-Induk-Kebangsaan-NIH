@@ -481,7 +481,17 @@
                 </div>
             </div>
 
-            <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm flex flex-col relative overflow-hidden font-sans" style="height: calc(100vh - 240px); min-height: 600px;">
+            <!-- NEW TABS FOR UNIT (Tasks vs Approved) -->
+            <div id="unit-tabs" class="hidden gap-8 border-b border-slate-200 px-6 mt-2 font-sans shrink-0">
+                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="pb-3 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-list-check"></i> Pending & Verification
+                </button>
+                <button onclick="switchTab('approved')" id="tab-btn-approved" class="pb-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-shield-check"></i> Approved Records
+                </button>
+            </div>
+
+            <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm flex flex-col relative overflow-hidden font-sans" style="height: calc(100vh - 250px); min-height: 600px;">
                 
                 <div id="loading-state" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center transition-opacity duration-300">
                     <div class="bg-white p-5 rounded-2xl shadow-xl border border-slate-100 flex flex-col items-center">
@@ -502,7 +512,7 @@
                                 <th class="px-5 py-4 w-[8%] text-center">Unit</th>
                                 <th class="px-5 py-4 w-[10%] text-center">Status</th>
                                 <th class="px-5 py-4 w-[10%] text-center">Final Determination</th>
-                                <th class="px-5 py-4 w-[8%] text-center">Date Completed</th>
+                                <th class="px-5 py-4 w-[8%] text-center">Date</th>
                             </tr>
                         </thead>
                         <tbody id="table-body" class="text-xs divide-y divide-slate-100 text-slate-600">
@@ -686,7 +696,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyvRxwmZK31TeGXp1fCmC0eFsbVGzHOjKxrbCyoH61ebn0lnsjvDrLAIYA2ct71s9kXBg/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxAbDT2n1k207hCKJU6Phiiy1FHZDOwGoPnwp0c899yYOedNcz7oqmOmPFAzE1GZDadPg/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -700,6 +710,7 @@
         let isImporting = false;
         let isPolling = false;
         let isAdminEditMode = false; 
+        let currentTab = 'tasks';
         
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
         
@@ -755,28 +766,10 @@
             return ed; 
         }
 
-        function isCompleteStatus(rawStatus) {
-            if (!rawStatus) return false;
-            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
-            return (s.includes('complete') || s.includes('selesai') || s.includes('done') || s.includes('siap'));
-        }
-
-        function isApproveStatus(rawStatus) {
-            if (!rawStatus) return false;
-            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
-            return (s.includes('approve') || s.includes('lulus'));
-        }
-
-        function isAwaitingStatus(rawStatus) {
-            if (!rawStatus) return false;
-            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
-            return (s.includes('awaiting') || s.includes('tunggu'));
-        }
-
         function normalizeStatus(rawStatus) {
-            if (isApproveStatus(rawStatus)) return 'Approve';
-            if (isAwaitingStatus(rawStatus)) return 'Awaiting approval';
-            return isCompleteStatus(rawStatus) ? 'Complete' : 'Pending';
+            if (!rawStatus) return 'Pending';
+            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
+            return (s.includes('complete') || s.includes('selesai') || s.includes('done') || s.includes('siap')) ? 'Complete' : 'Pending';
         }
 
         function normalizeUnit(rawUnit) {
@@ -803,6 +796,7 @@
                 Editor: normalizeEditorName(r['EDITOR'] || r['Editor']),
                 Unit: normalizeUnit(r['UNIT'] || r['Unit']),
                 Status: normalizeStatus(r['STATUS'] || r['Status']),
+                FinalDet: (r['FINAL DETERMINATION'] || r['Final Determination'] || 'Pending Correction').toString().trim(),
                 Date: r['DATE COMPLETED'] || r['Date Completed'] || r['Date'] || '',
                 CurrentDate: r['CURRENT DATE'] || r['Current Date'] || r['TarikhTerkini'] || ''
             };
@@ -882,6 +876,21 @@
             updateFolderCounts();
         }
 
+        function switchTab(tabName) {
+            currentTab = tabName;
+            const btnTasks = document.getElementById('tab-btn-tasks');
+            const btnApprove = document.getElementById('tab-btn-approved');
+            
+            if (tabName === 'tasks') {
+                btnTasks.className = "pb-3 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-colors flex items-center gap-2";
+                btnApprove.className = "pb-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2";
+            } else {
+                btnApprove.className = "pb-3 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition-colors flex items-center gap-2";
+                btnTasks.className = "pb-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2";
+            }
+            applyFilters();
+        }
+
         function showUnit(unitName) {
             activeUnit = unitName;
             DOM.dashboardView.classList.add('hidden');
@@ -902,9 +911,27 @@
             
             updateUnitDashboard(unitName);
 
-            DOM.search.value = '';
-            DOM.filterEditor.value = 'All';
-            applyFilters();
+            const unitTabs = document.getElementById('unit-tabs');
+            if (unitTabs) {
+                if (unitName === 'UPK' || unitName === 'UPKK' || unitName === 'UPMD') {
+                    unitTabs.classList.remove('hidden');
+                    unitTabs.classList.add('flex');
+                    DOM.search.value = '';
+                    DOM.filterEditor.value = 'All';
+                    switchTab('tasks'); 
+                } else {
+                    unitTabs.classList.add('hidden');
+                    unitTabs.classList.remove('flex');
+                    currentTab = 'tasks';
+                    DOM.search.value = '';
+                    DOM.filterEditor.value = 'All';
+                    applyFilters();
+                }
+            } else {
+                DOM.search.value = '';
+                DOM.filterEditor.value = 'All';
+                applyFilters();
+            }
         }
 
         function updateUnitDashboard(unitName) {
@@ -927,10 +954,10 @@
             });
 
             const total = unitRecords.length;
-            const complete = unitRecords.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval').length;
-            const approve = unitRecords.filter(r => r.Status === 'Approve').length;
-            const pending = total - complete - approve;
-            const percent = total > 0 ? Math.round(((complete + approve) / total) * 100) : 0;
+            const complete = unitRecords.filter(r => r.Status === 'Complete').length;
+            const approve = unitRecords.filter(r => r.FinalDet === 'Approve').length;
+            const pending = total - complete;
+            const percent = total > 0 ? Math.round((complete / total) * 100) : 0;
 
             document.getElementById('ud-total').textContent = total.toLocaleString();
             document.getElementById('ud-pending').textContent = pending.toLocaleString();
@@ -941,10 +968,10 @@
         }
 
         function updateKPIs() {
-            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || isValidRecord(r.Bahan));
+            const validData = tableData.filter(r => (r.Status === 'Complete') || isValidRecord(r.Bahan));
             
             const total = validData.length;
-            const complete = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
+            const complete = validData.filter(r => r.Status === 'Complete').length;
             const pending = total - complete;
             
             const predefinedStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
@@ -962,7 +989,7 @@
             tableData.forEach(r => {
                 const isFragment = !isValidRecord(r.Bahan);
 
-                if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') {
+                if (r.Status === 'Complete') {
                     comp++;
                 } 
                 
@@ -1007,11 +1034,17 @@
                 const isFragment = !isValidRecord(row.Bahan);
 
                 if (activeUnit === 'Complete') {
-                    matchUnit = (row.Status === 'Complete' || row.Status === 'Awaiting approval' || row.Status === 'Approve'); 
+                    matchUnit = (row.Status === 'Complete'); 
                 } else if (activeUnit === 'Item') {
                     matchUnit = !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
                 } else {
                     matchUnit = !isFragment && (row.Unit === activeUnit);
+                    
+                    if (currentTab === 'tasks') {
+                        matchUnit = matchUnit && (row.FinalDet !== 'Approve');
+                    } else if (currentTab === 'approved') {
+                        matchUnit = matchUnit && (row.FinalDet === 'Approve');
+                    }
                 }
                 
                 return matchSearch && matchEditor && matchUnit;
@@ -1046,9 +1079,16 @@
 
             let folderTotal = tableData.filter(row => {
                 const isFragment = !isValidRecord(row.Bahan);
-                if (activeUnit === 'Complete') return (row.Status === 'Complete' || row.Status === 'Awaiting approval' || row.Status === 'Approve');
+                if (activeUnit === 'Complete') return (row.Status === 'Complete');
                 if (activeUnit === 'Item') return !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
-                return !isFragment && (row.Unit === activeUnit);
+                
+                let matchUnit = !isFragment && (row.Unit === activeUnit);
+                if (currentTab === 'tasks') {
+                    matchUnit = matchUnit && (row.FinalDet !== 'Approve');
+                } else if (currentTab === 'approved') {
+                    matchUnit = matchUnit && (row.FinalDet === 'Approve');
+                }
+                return matchUnit;
             }).length;
 
             let baseTitle = '';
@@ -1073,15 +1113,12 @@
                 
                 let statusClass = 'text-red-700 bg-red-50 border-red-200 focus:ring-red-500/30';
                 if (statusClean === 'Complete') statusClass = 'text-emerald-700 bg-emerald-50 border-emerald-200 focus:ring-emerald-500/30';
-                if (statusClean === 'Awaiting approval') statusClass = 'text-amber-700 bg-amber-50 border-amber-200 focus:ring-amber-500/30';
-                if (statusClean === 'Approve') statusClass = 'text-blue-700 bg-blue-50 border-blue-200 focus:ring-blue-500/30';
                 
                 const dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
                 
                 let finalDet = '<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1.5 rounded border border-red-200 shadow-sm block w-max">Pending Correction</span>';
-                if (statusClean === 'Complete') finalDet = '<span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1.5 rounded border border-emerald-200 shadow-sm block w-max">Resolved by Editor</span>';
-                if (statusClean === 'Awaiting approval') finalDet = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Pending Verification</span>';
-                if (statusClean === 'Approve') finalDet = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Verified Accepted</span>';
+                if (row.FinalDet === 'Awaiting approval') finalDet = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Awaiting approval</span>';
+                if (row.FinalDet === 'Approve') finalDet = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Approve</span>';
                 
                 let isEditorLocked = false;
                 let isStatusLocked = false;
@@ -1097,8 +1134,6 @@
                     statusOptionsHTML = `
                         <option value="Pending" ${statusClean === 'Pending' ? 'selected' : ''}>Pending</option>
                         <option value="Complete" ${statusClean === 'Complete' ? 'selected' : ''}>Complete</option>
-                        <option value="Awaiting approval" ${statusClean === 'Awaiting approval' ? 'selected' : ''}>Awaiting approval</option>
-                        <option value="Approve" ${statusClean === 'Approve' ? 'selected' : ''}>Approve</option>
                     `;
                 } else {
                     if (statusClean === 'Pending') {
@@ -1107,7 +1142,7 @@
                             <option value="Complete">Complete</option>
                         `;
                     } else {
-                        statusOptionsHTML = `<option value="${statusClean}" selected>${statusClean}</option>`;
+                        statusOptionsHTML = `<option value="Complete" selected>Complete</option>`;
                     }
                 }
 
@@ -1124,6 +1159,9 @@
                     : `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass} text-center`;
 
                 const displayNo = startIndex + index + 1;
+                
+                // Pisahkan 2 tarikh jika wujud tanda "|"
+                let dateHtml = (row.Date || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
 
                 return `
                 <tr class="table-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors" data-rowidx="${row.RowIdx}" data-bil="${displayNo}">
@@ -1152,7 +1190,7 @@
                         </select>
                     </td>
                     <td class="px-5 py-5 align-top leading-tight flex justify-center final-det-cell">${finalDet}</td>
-                    <td class="px-5 py-5 text-slate-500 font-mono text-[11px] font-semibold date-col align-top text-center">${row.Date || '-'}</td>
+                    <td class="px-5 py-5 text-slate-500 font-mono text-[10px] font-semibold date-col align-top text-center flex flex-col gap-1">${dateHtml}</td>
                 </tr>`;
             }).join('');
 
@@ -1200,24 +1238,23 @@
                 let newEditor = editorSelect.value;
                 let newUnit = unitSelect.value;
                 let newDate = record.Date;
+                let newFinalDet = record.FinalDet;
 
-                if (field === 'Status' && newStatus === 'Complete' && !isAdminEditMode) {
-                    newStatus = 'Awaiting approval';
-                }
-
-                if (field === 'Status' && (newStatus === 'Complete' || newStatus === 'Awaiting approval' || newStatus === 'Approve')) {
+                if (field === 'Status' && newStatus === 'Complete') {
                     const d = new Date();
-                    newDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                    newDate = `Editor: ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                    newFinalDet = 'Awaiting approval';
+                } else if (field === 'Status' && newStatus === 'Pending') {
+                    newDate = '';
+                    newFinalDet = 'Pending Correction';
                 }
 
-                const oldDate = dateCol.textContent;
+                const oldDateHTML = dateCol.innerHTML;
                 const oldStatusClass = statusSelect.className;
                 
                 if (field === 'Status') {
                     let newClass = 'text-red-700 bg-red-50 border-red-200';
                     if (newStatus === 'Complete') newClass = 'text-emerald-700 bg-emerald-50 border-emerald-200';
-                    if (newStatus === 'Awaiting approval') newClass = 'text-amber-700 bg-amber-50 border-amber-200';
-                    if (newStatus === 'Approve') newClass = 'text-blue-700 bg-blue-50 border-blue-200';
                     
                     if (!isAdminEditMode && newStatus !== 'Pending') {
                         statusSelect.innerHTML = `<option value="${newStatus}" selected>${newStatus}</option>`;
@@ -1225,12 +1262,10 @@
                     } else {
                         statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newClass} text-center`;
                     }
-                    dateCol.textContent = newDate || '-';
+                    dateCol.innerHTML = (newDate || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
                     
                     let finalDetHTML = '<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1.5 rounded border border-red-200 shadow-sm block w-max">Pending Correction</span>';
-                    if (newStatus === 'Complete') finalDetHTML = '<span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1.5 rounded border border-emerald-200 shadow-sm block w-max">Resolved by Editor</span>';
-                    if (newStatus === 'Awaiting approval') finalDetHTML = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Pending Verification</span>';
-                    if (newStatus === 'Approve') finalDetHTML = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Verified Accepted</span>';
+                    if (newFinalDet === 'Awaiting approval') finalDetHTML = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Awaiting approval</span>';
                     
                     const finalDetCell = tr.querySelector('.final-det-cell');
                     if (finalDetCell) finalDetCell.innerHTML = finalDetHTML;
@@ -1244,7 +1279,6 @@
                     tr.style.opacity = '1';
                     
                     if (!isAdminEditMode && newStatus !== 'Pending') {
-                        // Kunci editor dan unit bila status bertukar
                         editorSelect.disabled = true;
                         editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
                         unitSelect.disabled = true;
@@ -1256,6 +1290,7 @@
                     
                     record.Status = newStatus;
                     record.Date = newDate;
+                    record.FinalDet = newFinalDet;
                     record.Editor = normalizeEditorName(newEditor);
                     record.Unit = normalizeUnit(newUnit);
                     
@@ -1269,17 +1304,20 @@
                     
                     let matchesCurrentFolder = false;
                     if (activeUnit === 'Complete') {
-                        matchesCurrentFolder = (record.Status === 'Complete' || record.Status === 'Awaiting approval' || record.Status === 'Approve');
+                        matchesCurrentFolder = (record.Status === 'Complete');
                     } else if (activeUnit === 'Item') {
-                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Status !== 'Awaiting approval' && record.Status !== 'Approve' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
+                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
                     } else {
-                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Status !== 'Awaiting approval' && record.Status !== 'Approve' && record.Unit === activeUnit);
+                        matchesCurrentFolder = (record.Unit === activeUnit);
+                        if (currentTab === 'tasks') {
+                            matchesCurrentFolder = matchesCurrentFolder && (record.FinalDet !== 'Approve');
+                        } else if (currentTab === 'approved') {
+                            matchesCurrentFolder = matchesCurrentFolder && (record.FinalDet === 'Approve');
+                        }
                     }
 
                     if (!matchesCurrentFolder) {
-                        if (activeUnit === 'Complete') {
-                            applyFilters(); 
-                        }
+                        applyFilters(); 
                     }
 
                     updateKPIs();
@@ -1289,7 +1327,7 @@
                     if (field === 'Status') {
                         statusSelect.value = record.Status;
                         statusSelect.className = oldStatusClass;
-                        dateCol.textContent = oldDate;
+                        dateCol.innerHTML = oldDateHTML;
                     } else if (field === 'Editor') editorSelect.value = record.Editor;
                     else if (field === 'Unit') unitSelect.value = record.Unit;
                     
@@ -1593,6 +1631,7 @@
             
             let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             let errorBoxHtml = '';
+            let errorTagsList = [];
             
             // 2. Ekstrak dan format "Error list:" jika wujud di dalam teks
             const errorListRegex = /Error list:\s*(\[[\s\S]*?\])?\s*/i;
@@ -1603,6 +1642,10 @@
                 if (jsonStr) {
                     try {
                         const errors = JSON.parse(jsonStr.replace(/&quot;/g, '"'));
+                        
+                        // Ekstrak tag-tag yang bermasalah (3 digit pertama cth: 100$e jadi 100)
+                        errorTagsList = [...new Set(errors.map(e => (e.tag || '').substring(0,3)).filter(t => t.length === 3))];
+
                         let errorDetails = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
                         errorBoxHtml = `<div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg shadow-inner block">${errorDetails}</div>`;
                     } catch(e) {}
@@ -1614,14 +1657,24 @@
             // 3. Kemaskan teks MARC secara natural macam dalam Google Sheet
             let lines = safeText.split('\n');
             let formattedLines = lines.map(line => {
+                let isErrorLine = false;
+                let lineTagMatch = line.match(/^=?([0-9A-Za-z]{3})\s/);
+                if (lineTagMatch && errorTagsList.includes(lineTagMatch[1])) {
+                    isErrorLine = true;
+                }
+
                 // Highlight Tag Utama (cth: =LDR, =001, 100) di awal baris
                 line = line.replace(/^(=?[A-Za-z0-9]{3})\s/, '<span class="text-blue-600 font-bold mr-1">$1</span> ');
                 // Highlight Subfield (cth: $a, $b)
                 line = line.replace(/(\$[a-z0-9])/gi, '<span class="text-emerald-600 font-bold mx-px">$1</span>');
-                return line;
+                
+                if (isErrorLine) {
+                    return `<span class="bg-red-100/70 text-red-900 border-l-4 border-red-500 pl-2 py-0.5 -ml-2 rounded block w-full mb-0.5">${line}</span>`;
+                }
+                return `<span class="block">${line}</span>`;
             });
             
-            return errorBoxHtml + formattedLines.join('\n');
+            return errorBoxHtml + formattedLines.join('');
         }
 
         function viewDetails(rowIdx) {
@@ -1638,7 +1691,7 @@
 
         function generateStatistics() {
             const container = document.getElementById('stats-container');
-            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || isValidRecord(r.Bahan));
+            const validData = tableData.filter(r => (r.Status === 'Complete') || isValidRecord(r.Bahan));
             const totalRecords = validData.length;
             
             if (totalRecords === 0) {
@@ -1646,7 +1699,7 @@
                 return;
             }
 
-            const totalCompleted = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
+            const totalCompleted = validData.filter(r => r.Status === 'Complete').length;
             const overallPercent = totalRecords > 0 ? Math.round((totalCompleted / totalRecords) * 100) : 0;
 
             let editorStats = {};
@@ -1657,7 +1710,7 @@
                 if (!editorStats[ed]) editorStats[ed] = { assigned: 0, completed: 0 };
                 
                 editorStats[ed].assigned++;
-                if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') editorStats[ed].completed++;
+                if (r.Status === 'Complete') editorStats[ed].completed++;
             });
 
             const sortedEditors = Object.entries(editorStats)
@@ -1698,7 +1751,7 @@
                 if (!unitStats[un]) unitStats[un] = { total: 0, completed: 0 };
                 
                 unitStats[un].total++;
-                if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') unitStats[un].completed++;
+                if (r.Status === 'Complete') unitStats[un].completed++;
             });
 
             const sortedUnits = Object.entries(unitStats).sort((a, b) => b[1].total - a[1].total);
@@ -1799,7 +1852,7 @@
 
         function downloadStatsCSV() {
             const reportType = document.getElementById('report-type-select').value;
-            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || isValidRecord(r.Bahan));
+            const validData = tableData.filter(r => (r.Status === 'Complete') || isValidRecord(r.Bahan));
             const totalRecords = validData.length;
             
             if (totalRecords === 0) {
@@ -1807,7 +1860,7 @@
                 return;
             }
 
-            const totalCompleted = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
+            const totalCompleted = validData.filter(r => r.Status === 'Complete').length;
             const overallPercent = totalRecords > 0 ? Math.round((totalCompleted / totalRecords) * 100) : 0;
 
             let csvContent = "KATALOG INDUK KEBANGSAAN (KIK) PERFORMANCE REPORT\n";
@@ -1823,7 +1876,7 @@
                     if (!editorStats[ed]) editorStats[ed] = { assigned: 0, completed: 0 };
                     
                     editorStats[ed].assigned++;
-                    if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') editorStats[ed].completed++;
+                    if (r.Status === 'Complete') editorStats[ed].completed++;
                 });
 
                 const sortedEditors = Object.entries(editorStats)
@@ -1855,7 +1908,7 @@
                     if (!unitStats[un]) unitStats[un] = { total: 0, completed: 0 };
                     
                     unitStats[un].total++;
-                    if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') unitStats[un].completed++;
+                    if (r.Status === 'Complete') unitStats[un].completed++;
                 });
 
                 const sortedUnits = Object.entries(unitStats).sort((a, b) => b[1].total - a[1].total);
@@ -1896,7 +1949,7 @@
                 return;
             }
 
-            const headers = ["No.", "HARVEST DATE", "MATERIAL (ERROR DETAILS)", "EDITOR", "UNIT", "STATUS", "FINAL DETERMINATION", "DATE COMPLETED", "CURRENT DATE"];
+            const headers = ["No.", "HARVEST DATE", "MATERIAL (ERROR DETAILS)", "EDITOR", "UNIT", "STATUS", "FINAL DETERMINATION", "DATE", "CURRENT DATE"];
             const data = [headers];
 
             filteredData.forEach((row, index) => {
@@ -1905,11 +1958,7 @@
                 let editorClean = row.Editor || '-';
                 let unitClean = row.Unit || '-';
                 let statusClean = row.Status || '-';
-                
-                let finalDetTxt = 'Pending Correction';
-                if (statusClean === 'Complete') finalDetTxt = 'Resolved by Editor';
-                if (statusClean === 'Awaiting approval') finalDetTxt = 'Pending Verification';
-                if (statusClean === 'Approve') finalDetTxt = 'Verified Accepted';
+                let finalDetTxt = row.FinalDet || '-';
 
                 let dateSelesai = row.Date || '-';
                 let currentDateClean = row.CurrentDate || '-';
