@@ -686,7 +686,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0hZxajR6EWV5abCSS_tC6bGia1miodsamupCYSZ4vzugyy6JTnbjREuuoCOK06RWsFA/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyvRxwmZK31TeGXp1fCmC0eFsbVGzHOjKxrbCyoH61ebn0lnsjvDrLAIYA2ct71s9kXBg/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -831,7 +831,8 @@
                 DOM.appLoader.style.opacity = '0';
                 setTimeout(() => DOM.appLoader.style.display = 'none', 500);
                 
-                setInterval(pollBackgroundData, 5000);
+                // Polling ditukar ke 30 saat untuk elak Google rate limit akibat Live Sync
+                setInterval(pollBackgroundData, 30000); 
             }
         }
         
