@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KATALOG INDUK KEBANGSAAN NIH (KIK) - Dashboard</title>
-    <link rel="icon" type="image/png" href="./favicon-katalog.png">
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Inter & Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons (Design Baharu) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- TAMBAHAN: SheetJS dengan sokongan Style (xlsx-js-style) -->
+    <!-- SheetJS dengan sokongan Style (xlsx-js-style) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
     <script>
@@ -26,7 +27,6 @@
                         navy: '#0f172a',    
                         lightgrey: '#f8fafc', 
                         bordergrey: '#e2e8f0' 
-                        /* Nota: Kod "blue" dibuang dari sini supaya ia tidak merosakkan warna default blue Tailwind */
                     }
                 }
             }
@@ -38,7 +38,17 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        body { background-color: #f8fafc; }
+        body { 
+            font-family: 'Poppins', sans-serif;
+            background-color: #e0eaf5; 
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(217,100%,94%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 100%, hsla(213,85%,91%,1) 0, transparent 50%);
+            background-attachment: fixed;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
         .table-row { transition: background-color 0.15s ease; }
         
         .data-select, .status-select {
@@ -67,16 +77,59 @@
         .toast-active { transform: translateY(0); opacity: 1; }
         
         .folder-icon { fill: currentColor; fill-opacity: 0.2; }
+
+        /* Glassmorphism utilities */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .glass-folder-inner {
+            background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        /* Subtle wave background for top cards */
+        .card-wave-bg {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(255,255,255,0.8), transparent);
+            border-bottom-left-radius: 1rem;
+            border-bottom-right-radius: 1rem;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Custom Gradients for Folder Cards */
+        .grad-upk { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+        .grad-upkk { background: linear-gradient(135deg, #34d399, #10b981); }
+        .grad-upmd { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+        .grad-item { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+        .grad-completed { background: linear-gradient(135deg, #10b981, #059669); }
     </style>
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col bg-blue-50 relative selection:bg-blue-200 selection:text-blue-900">
+<body class="antialiased min-h-screen text-slate-800 relative selection:bg-blue-200 selection:text-blue-900 overflow-x-hidden flex flex-col">
 
-    <!-- Latar Belakang Dekoratif -->
-    <div class="fixed top-0 inset-x-0 h-[500px] bg-gradient-to-b from-blue-200/50 via-blue-50/80 to-transparent pointer-events-none -z-10"></div>
+    <!-- Full Page Branding Background (Faded Center Watermark) -->
+    <div class="fixed inset-0 w-full h-full flex items-center justify-center pointer-events-none" style="z-index: -20;">
+        <img id="full-page-bg" src="" alt="Dashboard Background" class="w-[95vw] h-[95vh] max-w-[1400px] object-contain opacity-30 hidden" style="-webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 90%); mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 90%);">
+    </div>
+
+    <!-- Decorative background spheres -->
+    <div class="fixed -bottom-20 -left-20 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-2xl opacity-70 animate-blob pointer-events-none -z-10"></div>
+    <div class="fixed top-40 -right-20 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-2xl opacity-70 animate-blob animation-delay-2000 pointer-events-none -z-10"></div>
 
     <!-- Skrin Muat Turun (Full Screen Loader) -->
-    <div id="app-loader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[200] flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="bg-white/95 backdrop-blur-xl p-10 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full transform transition-all border border-white/50">
+    <div id="app-loader" class="fixed inset-0 bg-slate-900/60 z-[200] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="bg-white/95 p-10 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full transform transition-all border border-white/50">
             <div class="relative w-16 h-16 mb-6">
                 <div class="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
                 <div class="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
@@ -89,193 +142,254 @@
         </div>
     </div>
 
-    <!-- HEADER KEKAL -->
-    <header class="bg-blue-100/90 backdrop-blur-xl border-b border-blue-200 sticky top-0 z-30 shadow-sm transition-all">
-        <div class="px-8 py-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-black text-navy tracking-tight flex items-center gap-2.5">
-                    <div class="bg-white p-2 rounded-lg shadow-sm border border-blue-50">
-                        <i data-lucide="book-open" class="text-blue-600 w-6 h-6"></i>
+    <!-- KANDUNGAN DASHBOARD UTAMA -->
+    <main class="flex-1 w-full max-w-[1600px] mx-auto flex flex-col gap-8 relative z-10 p-4 md:p-8">
+        
+        <!-- HEADER SECTION -->
+        <header class="bg-gradient-to-r from-[#0c1e3e] via-[#1a3a6c] to-[#0c1e3e] rounded-3xl py-12 px-8 shadow-xl relative overflow-hidden text-white flex flex-col md:flex-row justify-between items-center gap-6 border-b-4 border-yellow-500 min-h-[180px] shrink-0">
+            
+            <!-- Left: Logos and Title -->
+            <div class="flex items-center gap-6 z-10">
+                <div class="flex gap-2">
+                    <!-- Jata Negara (Logo Utama) -->
+                    <div class="w-24 h-24 bg-slate-900/40 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 p-2 shadow-inner">
+                        <img id="logo-utama" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Coat_of_arms_of_Malaysia.svg/800px-Coat_of_arms_of_Malaysia.svg.png" alt="Jata Negara" class="w-full h-full object-contain drop-shadow-lg" onerror="this.src='https://placehold.co/100x100/transparent/FFD700?text=JATA'">
                     </div>
-                    KATALOG INDUK KEBANGSAAN NIH
-                </h1>
-                <h2 class="text-[13px] font-bold text-slate-500 mt-1 uppercase tracking-widest ml-11">Enterprise Correction Dashboard</h2>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-wide uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Katalog Induk Kebangsaan NIH</h1>
+                    <p class="text-blue-100 text-base md:text-lg tracking-widest uppercase mt-2 font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Sektor Sumber Maklumat Penyelidikan</p>
+                </div>
+            </div>
+
+            <!-- Right: Status Pills -->
+            <div class="flex items-center gap-4 z-10">
+                <!-- Current Time -->
+                <div class="bg-slate-900/70 backdrop-blur-md border border-slate-600 rounded-full px-5 py-2 flex items-center gap-3 shadow-inner">
+                    <i class="fa-regular fa-clock text-blue-200 text-xl"></i>
+                    <div class="leading-tight">
+                        <p class="text-[10px] text-blue-200 font-bold uppercase">Current Time</p>
+                        <p class="text-sm font-bold text-white" id="clock-text">--/--/---- --:--:--</p>
+                    </div>
+                </div>
+                <!-- Total Loaded -->
+                <div class="bg-blue-800/90 backdrop-blur-md border border-blue-400 rounded-full px-5 py-2 flex items-center gap-3 shadow-lg">
+                    <i class="fa-solid fa-database text-white text-xl"></i>
+                    <div class="leading-tight">
+                        <p class="text-[10px] text-blue-200 font-bold uppercase">Total Loaded</p>
+                        <p class="text-lg font-bold text-white" id="total-loaded">0</p>
+                    </div>
+                </div>
             </div>
             
-            <div class="flex items-center gap-8 text-sm">
-                <div class="flex flex-col text-right">
-                    <span class="text-slate-400 text-xs font-semibold uppercase">Current Time</span>
-                    <span id="last-updated" class="font-medium text-slate-700 flex items-center gap-1">
-                        <i data-lucide="clock" class="w-3 h-3"></i> <span id="clock-text">--/--/---- --:--:--</span>
-                    </span>
-                </div>
-                <div class="h-8 w-px bg-bordergrey"></div>
-                <div class="flex flex-col text-right">
-                    <span class="text-slate-400 text-xs font-semibold uppercase">Total Loaded</span>
-                    <span id="total-loaded" class="font-bold text-blue-600">0</span>
-                </div>
-            </div>
-        </div>
-    </header>
+            <!-- Header Decorative Element -->
+            <div class="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
+        </header>
 
-    <!-- KANDUNGAN DASHBOARD -->
-    <main class="flex-1 px-8 py-8 flex flex-col gap-8 max-w-[1920px] mx-auto w-full z-10">
-        
-        <!-- PANDANGAN MUKA DEPAN -->
+        <!-- PANDANGAN MUKA DEPAN (DASHBOARD) -->
         <div id="dashboard-view" class="flex flex-col gap-8 fade-in">
             
-            <!-- Global KPIs -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 flex-shrink-0">
-                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5">
-                    <div class="p-3.5 bg-slate-50 text-slate-600 rounded-xl shadow-inner border border-slate-100"><i data-lucide="database" class="w-6 h-6"></i></div>
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Records</p>
-                        <p id="kpi-total" class="text-3xl font-black text-navy mt-1 tracking-tight">0</p>
+            <!-- TOP STATS CARDS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- Card 1: Total Records -->
+                <div class="glass-card rounded-2xl p-6 md:p-8 flex items-center gap-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                    <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/30 flex items-center justify-center z-10 shrink-0">
+                        <i class="fa-solid fa-database text-white text-3xl"></i>
+                    </div>
+                    <div class="z-10 w-full">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Total Records</h3>
+                        <p class="text-4xl font-extrabold text-slate-800 mt-2" id="kpi-total">0</p>
+                    </div>
+                    <div class="absolute right-[-20px] bottom-[-20px] opacity-10 text-8xl z-0 pointer-events-none text-blue-600">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="card-wave-bg"></div>
+                </div>
+
+                <!-- Card 2: Completed -->
+                <div class="glass-card rounded-2xl p-6 md:p-8 flex items-center gap-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                    <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-green-400 to-green-600 shadow-lg shadow-green-500/30 flex items-center justify-center z-10 shrink-0">
+                        <i class="fa-regular fa-circle-check text-white text-4xl"></i>
+                    </div>
+                    <div class="z-10 w-full">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Completed</h3>
+                        <p class="text-4xl font-extrabold text-slate-800 mt-2" id="kpi-complete">0</p>
+                    </div>
+                    <div class="absolute right-[-20px] bottom-[-20px] opacity-10 text-8xl z-0 pointer-events-none text-green-600">
+                        <i class="fa-regular fa-circle-check"></i>
+                    </div>
+                    <div class="absolute right-4 bottom-4 w-20 h-10 opacity-40 z-0">
+                        <!-- Fake chart line using SVG -->
+                        <svg viewBox="0 0 100 30" class="w-full h-full stroke-green-500 fill-none stroke-2"><path d="M0,30 Q20,10 40,20 T80,5 T100,0"></path></svg>
                     </div>
                 </div>
-                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5">
-                    <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl shadow-inner border border-emerald-100/50"><i data-lucide="check-circle" class="w-6 h-6"></i></div>
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
-                        <p id="kpi-complete" class="text-3xl font-black text-emerald-600 mt-1 tracking-tight">0</p>
+
+                <!-- Card 3: Pending -->
+                <div class="glass-card rounded-2xl p-6 md:p-8 flex items-center gap-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                    <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-red-400 to-red-600 shadow-lg shadow-red-500/30 flex items-center justify-center z-10 shrink-0">
+                        <i class="fa-solid fa-circle-exclamation text-white text-4xl"></i>
+                    </div>
+                    <div class="z-10 w-full">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Pending (Incomplete)</h3>
+                        <p class="text-4xl font-extrabold text-red-600 mt-2" id="kpi-pending">0</p>
+                    </div>
+                    <div class="absolute right-[-20px] bottom-[-20px] opacity-10 text-8xl z-0 pointer-events-none text-red-600">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                     <div class="absolute right-4 bottom-4 w-20 h-10 opacity-40 z-0">
+                        <svg viewBox="0 0 100 30" class="w-full h-full stroke-red-400 fill-none stroke-2"><path d="M0,20 Q20,30 40,15 T80,10 T100,25"></path></svg>
                     </div>
                 </div>
-                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5">
-                    <div class="p-3.5 bg-red-50 text-red-600 rounded-xl shadow-inner border border-red-100/50"><i data-lucide="alert-circle" class="w-6 h-6"></i></div>
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending (Incomplete)</p>
-                        <p id="kpi-pending" class="text-3xl font-black text-red-600 mt-1 tracking-tight">0</p>
+
+                <!-- Card 4: Total Staff -->
+                <div class="glass-card rounded-2xl p-6 md:p-8 flex items-center gap-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 cursor-pointer" onclick="document.getElementById('btn-stats').click()">
+                    <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-600 shadow-lg shadow-purple-500/30 flex items-center justify-center z-10 shrink-0">
+                        <i class="fa-solid fa-users text-white text-3xl"></i>
+                    </div>
+                    <div class="z-10 w-full">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Total Staff (Active)</h3>
+                        <p class="text-4xl font-extrabold text-slate-800 mt-2" id="kpi-editors">0</p>
+                    </div>
+                    <div class="absolute right-[-10px] bottom-[-10px] text-indigo-200/40 text-7xl z-0 pointer-events-none">
+                        <i class="fa-solid fa-users"></i>
                     </div>
                 </div>
-                <div class="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-5 cursor-pointer group" onclick="document.getElementById('btn-stats').click()">
-                    <div class="p-3.5 bg-blue-50 text-blue-600 rounded-xl shadow-inner border border-blue-100/50 group-hover:bg-blue-600 group-hover:text-white transition-colors"><i data-lucide="users" class="w-6 h-6"></i></div>
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Staff (Active)</p>
-                        <p id="kpi-editors" class="text-3xl font-black text-navy mt-1 tracking-tight">0</p>
-                    </div>
-                </div>
+
             </div>
 
-            <div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200/60 pb-4 gap-4">
+            <!-- SECTION TITLE & ACTION BUTTONS -->
+            <div class="flex flex-col md:flex-row justify-between md:items-end gap-4 pt-4 pb-2 border-l-4 border-blue-600 pl-4">
                 <div>
-                    <h3 class="text-xl font-extrabold text-navy tracking-tight">Task & Distribution Center</h3>
-                    <p class="text-sm text-slate-500 mt-1 font-medium">Please select a unit to view and start editing rejected records.</p>
+                    <h2 class="text-2xl font-bold text-[#0c1e3e]">Task & Distribution Center</h2>
+                    <p class="text-sm text-slate-500 font-medium mt-1">Please select a unit to view and start editing rejected records.</p>
                 </div>
                 <div class="flex gap-3">
-                    <button id="btn-stats" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm hover:shadow-md">
-                        <i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i> Statistical Report
+                    <!-- Statistical Report Button -->
+                    <button id="btn-stats" class="bg-white hover:bg-slate-50 text-[#0c1e3e] font-semibold py-3 px-6 rounded-full shadow-sm border border-slate-200 flex items-center gap-2 transition-all text-lg">
+                        <i class="fa-solid fa-chart-pie text-blue-600"></i>
+                        Statistical Report
                     </button>
-                    <button id="btn-admin-panel" class="bg-navy hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg">
-                        <i data-lucide="folder-sync" class="w-4 h-4 text-emerald-400"></i> Admin Panel
+                    <!-- Admin Panel Button -->
+                    <button id="btn-admin-panel" class="bg-[#0c1e3e] hover:bg-[#152e5a] text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-900/20 flex items-center gap-2 transition-all text-lg">
+                        <i class="fa-solid fa-gear"></i>
+                        Admin Panel <i class="fa-solid fa-arrow-right text-sm ml-1"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Folders Grid (Diselaraskan 100% Seragam & Minimalis) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <!-- BOTTOM FOLDER CARDS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 
-                <!-- Folder 1: UPK -->
-                <div onclick="showUnit('UPK')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
-                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
-                        <div class="flex items-start gap-3 mb-2">
-                            <i data-lucide="folder" class="w-8 h-8 text-blue-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
-                            <div>
-                                <h4 class="text-lg font-bold text-slate-700 leading-none">Unit UPK</h4>
-                                <p class="text-[10px] font-semibold text-slate-400 mt-1.5 leading-tight">Collection Development Unit</p>
-                            </div>
-                        </div>
-                        <p class="text-4xl font-black text-navy mt-2"><span id="count-upk">0</span></p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Task Records</p>
+                <!-- Folder 1: Unit UPK -->
+                <div onclick="showUnit('UPK')" class="grad-upk rounded-3xl p-[2px] shadow-lg relative cursor-pointer group hover:scale-[1.02] transition-transform">
+                    <div class="absolute -top-4 left-6 bg-white/40 backdrop-blur-md px-4 py-1.5 rounded-t-lg border-t border-l border-r border-white/50 flex items-center gap-2 text-sm font-bold text-blue-900">
+                        <i class="fa-regular fa-folder"></i>
                     </div>
-                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-3 flex items-center justify-end relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    <div class="glass-folder-inner w-full h-full rounded-[22px] p-6 pt-8 flex flex-col justify-between relative overflow-hidden">
+                        <div>
+                            <h4 class="font-bold text-2xl text-slate-800">Unit UPK</h4>
+                            <p class="text-xs text-slate-600 uppercase font-semibold mt-1">Collection Development Unit</p>
+                        </div>
+                        <div class="mt-8 mb-4">
+                            <p class="text-5xl font-black text-slate-800" id="count-upk">0</p>
+                            <p class="text-xs text-slate-700 font-bold uppercase tracking-wider mt-2">Task Records</p>
+                        </div>
+                        <button class="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors">
+                            <i class="fa-solid fa-arrow-right text-base"></i>
+                        </button>
+                        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-white opacity-40 rounded-full blur-2xl pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Folder 2: Unit UPKK (Contains Sub-Folder ITEM) -->
+            <div onclick="showUnit('UPKK')" class="grad-upkk rounded-3xl p-[2px] shadow-lg relative cursor-pointer group hover:scale-[1.02] transition-transform">
+                <div class="absolute -top-4 left-6 bg-white/40 backdrop-blur-md px-4 py-1.5 rounded-t-lg border-t border-l border-r border-white/50 flex items-center gap-2 text-sm font-bold text-emerald-900">
+                    <i class="fa-regular fa-folder"></i>
+                </div>
+                <div class="glass-folder-inner w-full h-full rounded-[22px] p-6 pt-8 flex flex-col justify-between relative overflow-hidden">
+                    <div>
+                        <h4 class="font-bold text-2xl text-slate-800">Unit UPKK</h4>
+                        <p class="text-xs text-slate-600 uppercase font-semibold mt-1">Special Collection Management</p>
+                    </div>
+                    
+                    <div class="mt-4 mb-2 flex justify-between items-end">
+                        <div>
+                            <p class="text-5xl font-black text-slate-800" id="count-upkk">0</p>
+                            <p class="text-xs text-slate-700 font-bold uppercase tracking-wider mt-2">Task Records</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Sub-Folder ITEM (Nested Inside UPKK) -->
+                    <div onclick="event.stopPropagation(); showUnit('Item')" class="mt-2 bg-gradient-to-r from-orange-400 to-orange-500 rounded-xl p-0.5 shadow-md relative group/item hover:-translate-y-1 transition-transform z-20 cursor-pointer">
+                        <div class="bg-white/95 backdrop-blur-sm rounded-[10px] p-3 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-md bg-orange-100 flex items-center justify-center text-orange-600 border border-orange-200">
+                                    <i class="fa-solid fa-folder-open text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <h5 class="font-extrabold text-slate-800 text-[13px] leading-none">ITEM</h5>
+                                        <span class="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm leading-none">NEW</span>
+                                    </div>
+                                    <p class="text-[9px] text-slate-500 font-bold uppercase mt-1 leading-none">Unassigned Items</p>
+                                </div>
+                            </div>
+                            <p class="text-xl font-black text-orange-600" id="count-item">0</p>
+                        </div>
+                    </div>
+
+                    <div class="absolute top-10 -right-10 w-32 h-32 bg-white opacity-30 rounded-full blur-2xl pointer-events-none"></div>
+                </div>
+            </div>
+
+            <!-- Folder 3: Unit UPMD -->
+                <div onclick="showUnit('UPMD')" class="grad-upmd rounded-3xl p-[2px] shadow-lg relative cursor-pointer group hover:scale-[1.02] transition-transform">
+                    <div class="absolute -top-4 left-6 bg-white/40 backdrop-blur-md px-4 py-1.5 rounded-t-lg border-t border-l border-r border-white/50 flex items-center gap-2 text-sm font-bold text-purple-900">
+                        <i class="fa-regular fa-folder"></i>
+                    </div>
+                    <div class="glass-folder-inner w-full h-full rounded-[22px] p-6 pt-8 flex flex-col justify-between relative overflow-hidden">
+                        <div>
+                            <h4 class="font-bold text-2xl text-slate-800">Unit UPMD</h4>
+                            <p class="text-xs text-slate-600 uppercase font-semibold mt-1">Digital Information Management</p>
+                        </div>
+                        <div class="mt-8 mb-4">
+                            <p class="text-5xl font-black text-slate-800" id="count-upmd">0</p>
+                            <p class="text-xs text-slate-700 font-bold uppercase tracking-wider mt-2">Task Records</p>
+                        </div>
+                        <button class="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg hover:bg-purple-700 transition-colors">
+                            <i class="fa-solid fa-arrow-right text-base"></i>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Folder 2: UPKK -->
-                <div onclick="showUnit('UPKK')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-teal-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
-                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
-                        <div class="flex items-start gap-3 mb-2">
-                            <i data-lucide="folder" class="w-8 h-8 text-teal-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
-                            <div>
-                                <h4 class="text-lg font-bold text-slate-700 leading-none">Unit UPKK</h4>
-                                <p class="text-[10px] font-semibold text-slate-400 mt-1.5 leading-tight">Special Collection Management Unit</p>
-                            </div>
-                        </div>
-                        <p class="text-4xl font-black text-navy mt-2"><span id="count-upkk">0</span></p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Task Records</p>
+                <!-- Folder 4: COMPLETED -->
+                <div onclick="showUnit('Complete')" class="grad-completed rounded-3xl p-[2px] shadow-lg relative cursor-pointer group hover:scale-[1.02] transition-transform">
+                    <div class="absolute -top-4 left-6 bg-white/40 backdrop-blur-md px-4 py-1.5 rounded-t-lg border-t border-l border-r border-white/50 flex items-center gap-2 text-sm font-bold text-emerald-900">
+                        <i class="fa-regular fa-square-check"></i>
                     </div>
-                    <div class="bg-gradient-to-r from-teal-400 to-teal-500 p-3 flex items-center justify-end relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
+                    <div class="glass-folder-inner w-full h-full rounded-[22px] p-6 pt-8 flex flex-col justify-between relative overflow-hidden">
+                        <div>
+                            <h4 class="font-bold text-2xl text-slate-800">COMPLETED</h4>
+                            <p class="text-xs text-slate-600 uppercase font-semibold mt-1">Full KIK Archive</p>
+                        </div>
+                        <div class="mt-8 mb-4">
+                            <p class="text-5xl font-black text-slate-800" id="count-complete">0</p>
+                            <p class="text-xs text-slate-700 font-bold uppercase tracking-wider mt-2">Archived Records</p>
+                        </div>
+                        <button class="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg hover:bg-emerald-700 transition-colors">
+                            <i class="fa-solid fa-arrow-right text-base"></i>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Folder 3: UPMD -->
-                <div onclick="showUnit('UPMD')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-purple-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
-                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
-                        <div class="flex items-start gap-3 mb-2">
-                            <i data-lucide="folder" class="w-8 h-8 text-purple-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
-                            <div>
-                                <h4 class="text-lg font-bold text-slate-700 leading-none">Unit UPMD</h4>
-                                <p class="text-[10px] font-semibold text-slate-400 mt-1.5 leading-tight">Digital Information Management Unit</p>
-                            </div>
-                        </div>
-                        <p class="text-4xl font-black text-navy mt-2"><span id="count-upmd">0</span></p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Task Records</p>
-                    </div>
-                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-3 flex items-center justify-end relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
-                    </div>
-                </div>
-
-                <!-- Folder 4: ITEM -->
-                <div onclick="showUnit('Item')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-amber-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100 relative">
-                    <div class="absolute -right-6 -top-5 bg-red-500 text-white text-[10px] font-bold px-8 py-1.5 transform rotate-45 z-20 shadow-md tracking-wider">NEW</div>
-                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
-                        <div class="flex items-start gap-3 mb-2">
-                            <i data-lucide="folder-search" class="w-8 h-8 text-amber-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
-                            <div>
-                                <h4 class="text-lg font-bold text-amber-900 leading-none">ITEM <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded align-top ml-1">New</span></h4>
-                                <p class="text-[10px] font-semibold text-amber-600 mt-1.5 leading-tight">Needs Review & Distribution</p>
-                            </div>
-                        </div>
-                        <p class="text-4xl font-black text-navy mt-2"><span id="count-item">0</span></p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Unassigned</p>
-                    </div>
-                    <div class="bg-gradient-to-r from-amber-400 to-amber-500 p-3 flex items-center justify-end relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
-                    </div>
-                </div>
-
-                <!-- Folder 5: SELESAI -->
-                <div onclick="showUnit('Complete')" class="cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group border border-slate-100">
-                    <div class="p-5 flex-1 flex flex-col justify-center bg-white relative">
-                        <div class="flex items-start gap-3 mb-2">
-                            <i data-lucide="check-square" class="w-8 h-8 text-emerald-500 opacity-80 group-hover:scale-110 transition-transform mt-0.5"></i>
-                            <div>
-                                <h4 class="text-lg font-bold text-emerald-900 leading-none">COMPLETED</h4>
-                                <p class="text-[10px] font-semibold text-emerald-600 mt-1.5 leading-tight">Full KIK Archive</p>
-                            </div>
-                        </div>
-                        <p class="text-4xl font-black text-navy mt-2"><span id="count-complete">0</span></p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Archived Records</p>
-                    </div>
-                    <div class="bg-gradient-to-r from-emerald-400 to-emerald-500 p-3 flex items-center justify-end relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                        <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform z-10"></i>
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- PANDANGAN SENARAI JADUAL -->
         <div id="list-view" class="hidden flex-col gap-5">
             
-            <div class="flex flex-col lg:flex-row justify-between items-center gap-4 flex-shrink-0 bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/60 shadow-sm">
+            <div class="flex flex-col lg:flex-row justify-between items-center gap-4 flex-shrink-0 bg-white/90 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/60 shadow-sm font-sans">
                 <div class="flex items-center gap-4 w-full lg:w-auto">
                     <button onclick="showDashboard()" class="bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 p-2.5 rounded-xl transition-all shadow-sm hover:shadow" title="Back to Dashboard">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
@@ -297,7 +411,6 @@
                         <option value="All">All Editors</option>
                     </select>
 
-                    <!-- BUTANG EXPORT EXCEL -->
                     <button onclick="downloadUnitExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center gap-2 whitespace-nowrap text-sm font-bold" title="Download Records for this Folder to Excel">
                         <i data-lucide="download" class="w-4 h-4"></i>
                         <span class="hidden md:inline">Download Excel</span>
@@ -305,8 +418,69 @@
                 </div>
             </div>
 
-            <!-- Table Container -->
-            <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm flex flex-col relative overflow-hidden" style="height: calc(100vh - 240px); min-height: 600px;">
+            <!-- NEW UNIT DASHBOARD -->
+            <div id="unit-dashboard" class="hidden grid grid-cols-2 md:grid-cols-5 gap-4 font-sans shrink-0">
+                <!-- Total Unit Records -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 text-5xl text-blue-600"><i class="fa-solid fa-folder"></i></div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Records</p>
+                    <p class="text-3xl font-black text-navy mt-1" id="ud-total">0</p>
+                </div>
+                <!-- Pending Unit Records -->
+                <div class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 text-5xl text-red-600"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <p class="text-[10px] font-bold text-red-600 uppercase tracking-wider">Pending Review</p>
+                    <p class="text-3xl font-black text-red-700 mt-1" id="ud-pending">0</p>
+                </div>
+                <!-- Completed Unit Records -->
+                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 text-5xl text-emerald-600"><i class="fa-solid fa-check-double"></i></div>
+                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Completed (Editor)</p>
+                    <p class="text-3xl font-black text-emerald-700 mt-1" id="ud-complete">0</p>
+                </div>
+                <!-- Approved Unit Records -->
+                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 text-5xl text-indigo-600"><i class="fa-solid fa-shield-check"></i></div>
+                    <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Approved</p>
+                    <p class="text-3xl font-black text-indigo-700 mt-1" id="ud-approve">0</p>
+                </div>
+                <!-- Progress Percentage -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-center relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-full h-full bg-gradient-to-l from-emerald-500/20 to-transparent pointer-events-none"></div>
+                    <div class="flex justify-between items-end mb-2 z-10">
+                        <p class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Progress Rate</p>
+                        <p class="text-2xl font-black text-white leading-none" id="ud-percent">0%</p>
+                    </div>
+                    <div class="w-full bg-slate-600 rounded-full h-2 z-10 shadow-inner">
+                        <div class="bg-emerald-400 h-2 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] transition-all duration-500" id="ud-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBFOLDER ITEM (Akan terpapar bila pengguna masuk ke UPKK sahaja) -->
+            <div id="subfolder-container" class="hidden grid-cols-1 md:grid-cols-4 gap-4 font-sans shrink-0">
+                <div onclick="showUnit('Item')" class="bg-gradient-to-r from-orange-400 to-orange-500 rounded-2xl p-0.5 shadow-md cursor-pointer hover:-translate-y-1 transition-transform group">
+                    <div class="bg-white/95 backdrop-blur-sm rounded-[14px] p-4 flex items-center justify-between h-full">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 border border-orange-200 shadow-inner group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-folder-open text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h5 class="font-extrabold text-slate-800 text-lg leading-none">ITEM</h5>
+                                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">NEW</span>
+                                </div>
+                                <p class="text-xs text-slate-500 font-bold uppercase mt-1">Unassigned Items</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-3xl font-black text-orange-600" id="subfolder-count-item">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm flex flex-col relative overflow-hidden font-sans" style="height: calc(100vh - 240px); min-height: 600px;">
                 
                 <div id="loading-state" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center transition-opacity duration-300">
                     <div class="bg-white p-5 rounded-2xl shadow-xl border border-slate-100 flex flex-col items-center">
@@ -316,16 +490,18 @@
                 </div>
 
                 <div class="flex-1 overflow-auto bg-white">
-                    <table class="w-full text-left border-collapse table-fixed">
-                        <thead class="bg-slate-50/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    <table class="w-full text-left border-collapse table-fixed min-w-[1200px]">
+                        <!-- TAJUK JADUAL DI-CENTER-KAN KESEMUANYA -->
+                        <thead class="bg-slate-50/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider text-center">
                             <tr>
-                                <th class="px-5 py-4 w-[5%]">No.</th>
-                                <th class="px-5 py-4 w-[12%] text-emerald-700">Import Date</th>
-                                <th class="px-5 py-4 w-[35%]">Material (Error Details)</th>
-                                <th class="px-5 py-4 w-[15%]">Select Editor</th>
-                                <th class="px-5 py-4 w-[10%]">Select Unit</th>
-                                <th class="px-5 py-4 w-[11%]">Status</th>
-                                <th class="px-5 py-4 w-[12%]">Date Completed</th>
+                                <th class="px-5 py-4 w-[4%] text-center">No.</th>
+                                <th class="px-5 py-4 w-[10%] text-emerald-700 text-center">Harvest Date</th>
+                                <th class="px-5 py-4 w-[38%] text-center">Material (Error Details)</th>
+                                <th class="px-5 py-4 w-[12%] text-center">Editor</th>
+                                <th class="px-5 py-4 w-[8%] text-center">Unit</th>
+                                <th class="px-5 py-4 w-[10%] text-center">Status</th>
+                                <th class="px-5 py-4 w-[10%] text-center">Final Determination</th>
+                                <th class="px-5 py-4 w-[8%] text-center">Date Completed</th>
                             </tr>
                         </thead>
                         <tbody id="table-body" class="text-xs divide-y divide-slate-100 text-slate-600">
@@ -352,13 +528,13 @@
     </main>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-navy text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 toast-enter z-50 font-medium">
+    <div id="toast" class="fixed bottom-6 right-6 bg-navy text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 toast-enter z-50 font-medium font-sans">
         <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
         <span id="toast-msg" class="text-sm">Notification</span>
     </div>
 
     <!-- Modals -->
-    <div id="marc-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+    <div id="marc-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col transform scale-95 transition-transform duration-300" id="marc-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
@@ -376,7 +552,7 @@
         </div>
     </div>
 
-    <div id="stats-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+    <div id="stats-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300" id="stats-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
@@ -401,7 +577,7 @@
         </div>
     </div>
 
-    <div id="pin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+    <div id="pin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col transform scale-95 transition-transform duration-300" id="pin-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
@@ -417,7 +593,7 @@
         </div>
     </div>
 
-    <div id="admin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4">
+    <div id="admin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col transform scale-95 transition-transform duration-300" id="admin-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
@@ -427,7 +603,19 @@
             </div>
             <div class="p-6 flex flex-col gap-4">
                 <p class="text-sm text-slate-600 font-medium">This area is dedicated to system data management.</p>
-                <div class="bg-blue-50/50 border border-blue-200/50 rounded-xl p-5 flex flex-col gap-3 mt-2">
+                
+                <!-- NEW BRANDING UPLOAD SECTION -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col gap-3 mt-1">
+                    <h4 class="font-bold text-navy text-sm flex items-center gap-2">
+                        <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Branding / Logo Upload
+                    </h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Upload and manage your organisation's logo or dashboard branding (e.g., ministry or agency) for a customised look.</p>
+                    <button onclick="openBrandingModal()" class="mt-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm w-full">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> BRANDING SETTINGS
+                    </button>
+                </div>
+
+                <div class="bg-blue-50/50 border border-blue-200/50 rounded-xl p-5 flex flex-col gap-3 mt-1">
                     <h4 class="font-bold text-navy text-sm flex items-center gap-2">
                         <i data-lucide="folder-sync" class="w-5 h-5 text-blue-600"></i> Error Synchronization
                     </h4>
@@ -437,7 +625,16 @@
                     </button>
                 </div>
                 
-                <!-- KOTAK TAMBAHAN BUTANG ADMIN OVERRIDE (TIDAK MENGGANGGU UI LUAR) -->
+                <div class="bg-indigo-50/50 border border-indigo-200/50 rounded-xl p-5 flex flex-col gap-3 mt-1">
+                    <h4 class="font-bold text-navy text-sm flex items-center gap-2">
+                        <i data-lucide="check-square" class="w-5 h-5 text-indigo-600"></i> Approved Records Synchronization
+                    </h4>
+                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Sistem akan menyemak fail yang dimuat naik dengan pangkalan data dan menukar status rekod yang berjaya kepada "Approve".</p>
+                    <button id="btn-import-approve" class="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                        <i data-lucide="file-check-2" class="w-5 h-5"></i> VERIFY APPROVED RECORDS
+                    </button>
+                </div>
+
                 <div class="bg-amber-50/50 border border-amber-200/50 rounded-xl p-5 flex flex-col gap-3 mt-2">
                     <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
                         <i data-lucide="unlock" class="w-5 h-5 text-amber-600"></i> Unlock Completed Records
@@ -451,9 +648,44 @@
         </div>
     </div>
 
+    <!-- Modals Tambahan: Branding Modal -->
+    <div id="branding-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col transform scale-95 transition-transform duration-300" id="branding-modal-content">
+            <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-navy flex items-center gap-2">
+                    <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Upload Branding & Logos
+                </h3>
+                <button onclick="closeModal('branding-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-6">
+                <!-- Upload Logo 1 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm text-slate-800 font-bold">1. Logo Utama (Jata Negara / Kiri Header)</label>
+                    <p class="text-xs text-slate-500 font-medium mb-1">Gantikan logo Jata Negara sedia ada dengan logo rasmi pilihan anda.</p>
+                    <div class="flex items-center gap-4">
+                        <input type="file" id="upload-logo-utama" accept="image/*" onchange="processUpload(event, 'logo-utama', 'kik_logo_utama', false)" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full">
+                    </div>
+                </div>
+                
+                <hr class="border-slate-100">
+
+                <!-- Upload Background Dashboard -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm text-slate-800 font-bold">2. Gambar Latar Belakang Dashboard (Full Background)</label>
+                    <p class="text-xs text-slate-500 font-medium mb-1">Muat naik gambar untuk dijadikan corak latar belakang penuh pada keseluruhan sistem.</p>
+                    <div class="flex items-center gap-4">
+                        <input type="file" id="upload-logo-kedua" accept="image/*" onchange="processUpload(event, 'full-page-bg', 'kik_header_bg', true)" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer w-full">
+                    </div>
+                </div>
+                
+                <button onclick="resetLogos()" class="mt-4 text-xs font-bold text-red-600 hover:text-red-800 underline text-center w-full">Reset to Default Branding</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz-_Gq5T2o1op-EKu93Oo1tqPv0ZttzfcyZlrvJ7wwLjO7sK7QCcSOZ64y1TJfOvUN-CQ/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyg1OO58TVqP1im_9nsesD6OejmEF0h79FFF2NtreQBSagrESyAv1SPcPHGdIHDScmcxA/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -463,15 +695,13 @@
         let activeUnit = null; 
         let dynamicEditors = [];
         
-        // AUTO-REFRESH & INTERACTION FLAGS
         let isSaving = false;
         let isImporting = false;
         let isPolling = false;
-        let isAdminEditMode = false; // FLAG UNTUK OVERRIDE ADMIN
+        let isAdminEditMode = false; 
         
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
         
-        // SENARAI 10 NAMA RASMI SAHAJA (DITAMBAH DENGAN SISTEM & LIBRARY ADMIN)
         const listEditors = [
             "Sistem", "Library admin", 
             "MAZIDAH ABD. RAHMAN", 
@@ -482,7 +712,7 @@
             "NOOR SAKINAH IBARAHIM", 
             "ANDRIA GANA ANAK GIRI", 
             "NOOREYZAN MANANGIN", 
-            "SHAFIQ S. BAHARUDDIN", 
+            "SHAFIQ S. BAHARUDDIN",
             "MAIZAITUL HUSNA ABDUL HALIM"
         ];
         
@@ -503,8 +733,6 @@
 
         lucide.createIcons();
 
-        // FUNGSI INI AKAN MEMASTIKAN SEMUA VARIASI EJAAN DALAM GOOGLE SHEET
-        // DITUKAR MENJADI 10 NAMA RASMI DI ATAS SAHAJA KETIKA DIPAPARKAN
         function normalizeEditorName(rawName) {
             if (!rawName) return 'Sistem';
             let ed = rawName.toString().trim().toUpperCase();
@@ -532,7 +760,21 @@
             return (s.includes('complete') || s.includes('selesai') || s.includes('done') || s.includes('siap'));
         }
 
+        function isApproveStatus(rawStatus) {
+            if (!rawStatus) return false;
+            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
+            return (s.includes('approve') || s.includes('lulus'));
+        }
+
+        function isAwaitingStatus(rawStatus) {
+            if (!rawStatus) return false;
+            let s = rawStatus.toString().toLowerCase().replace(/[^a-z]/g, ''); 
+            return (s.includes('awaiting') || s.includes('tunggu'));
+        }
+
         function normalizeStatus(rawStatus) {
+            if (isApproveStatus(rawStatus)) return 'Approve';
+            if (isAwaitingStatus(rawStatus)) return 'Awaiting approval';
             return isCompleteStatus(rawStatus) ? 'Complete' : 'Pending';
         }
 
@@ -545,7 +787,21 @@
             return 'Auto Import';
         }
 
+        function mapIncomingRecord(r) {
+            return {
+                RowIdx: r.RowIdx,
+                'DATE HARVEST': r['HARVEST DATE'] || r['DATE HARVEST'] || r['Harvest Date'] || '',
+                Bahan: r['MATERIAL (ERROR DETAILS)'] || r['MATERIAL'] || r['Bahan'] || '',
+                Editor: normalizeEditorName(r['EDITOR'] || r['Editor']),
+                Unit: normalizeUnit(r['UNIT'] || r['Unit']),
+                Status: normalizeStatus(r['STATUS'] || r['Status']),
+                Date: r['DATE COMPLETED'] || r['Date Completed'] || r['Date'] || '',
+                CurrentDate: r['CURRENT DATE'] || r['Current Date'] || r['TarikhTerkini'] || ''
+            };
+        }
+
         async function init() {
+            loadSavedLogos();
             updateTimestamp();
             try {
                 if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
@@ -554,12 +810,7 @@
                     const response = await fetch(GAS_WEB_APP_URL);
                     const resJson = await response.json();
                     if(resJson.status === 'success') {
-                        tableData = resJson.data.map(r => {
-                            r.Editor = normalizeEditorName(r.Editor);
-                            r.Status = normalizeStatus(r.Status);
-                            r.Unit = normalizeUnit(r.Unit);
-                            return r;
-                        });
+                        tableData = resJson.data.map(mapIncomingRecord);
                     } else throw new Error(resJson.message);
                 }
                 
@@ -572,36 +823,26 @@
                 DOM.appLoader.style.opacity = '0';
                 setTimeout(() => DOM.appLoader.style.display = 'none', 500);
                 
-                // MULA PROSES AUTO-REFRESH BACKGROUND SETIAP 5 SAAT (5000ms)
                 setInterval(pollBackgroundData, 5000);
             }
         }
         
-        // FUNGSI BACKGROUND AUTO-REFRESH TANPA MENGGANGGU UI
         async function pollBackgroundData() {
-            // HALANG refresh jika user sedang Save, Import, atau jika kotak Dropdown (select) sedang difokuskan
             if (isPolling || isSaving || isImporting || (document.activeElement && document.activeElement.closest('#table-body'))) {
                 return;
             }
             
             isPolling = true;
             try {
-                // Menggunakan timestamp 't=' untuk mengelak memori pelayar web (cache buster)
                 const response = await fetch(`${GAS_WEB_APP_URL}?action=get_all&t=${new Date().getTime()}`);
                 const resJson = await response.json();
                 
                 if (resJson.status === 'success') {
-                    const newDataFormatted = resJson.data.map(r => {
-                        r.Editor = normalizeEditorName(r.Editor);
-                        r.Status = normalizeStatus(r.Status);
-                        r.Unit = normalizeUnit(r.Unit);
-                        return r;
-                    });
+                    const newDataFormatted = resJson.data.map(mapIncomingRecord);
                     
                     const currentDataStr = JSON.stringify(tableData);
                     const newDataStr = JSON.stringify(newDataFormatted);
                     
-                    // JIKA ADA PERUBAHAN DATA, barulah kita update memori tableData
                     if (currentDataStr !== newDataStr) {
                         tableData = newDataFormatted;
                         
@@ -615,7 +856,7 @@
                     }
                 }
             } catch (err) {
-                // Ralat dihiraukan (fail silently) di sebalik skrin supaya tak ganggu pengguna
+                // Ignore silently
             } finally {
                 isPolling = false;
             }
@@ -639,25 +880,70 @@
             DOM.listView.classList.remove('hidden');
             DOM.listView.classList.add('flex');
             
+            const subfolderContainer = document.getElementById('subfolder-container');
+            if(subfolderContainer) {
+                if (unitName === 'UPKK') {
+                    subfolderContainer.classList.remove('hidden');
+                    subfolderContainer.classList.add('grid');
+                } else {
+                    subfolderContainer.classList.add('hidden');
+                    subfolderContainer.classList.remove('grid');
+                }
+            }
+            
+            updateUnitDashboard(unitName);
+
             DOM.search.value = '';
             DOM.filterEditor.value = 'All';
-            applyFilters(); // Menjalankan fungsi ini akan memanggil renderTable yang mengemaskini tajuk & jadual
+            applyFilters();
+        }
+
+        function updateUnitDashboard(unitName) {
+            const unitDash = document.getElementById('unit-dashboard');
+            if(!unitDash) return;
+            
+            if (unitName === 'Complete') {
+                unitDash.classList.add('hidden');
+                unitDash.classList.remove('grid');
+                return;
+            }
+            unitDash.classList.remove('hidden');
+            unitDash.classList.add('grid');
+
+            let unitRecords = tableData.filter(r => {
+                const isFragment = !(r.Bahan && r.Bahan.includes('LEADER'));
+                if (isFragment) return false;
+                if (unitName === 'Item') return (r.Unit !== 'UPK' && r.Unit !== 'UPKK' && r.Unit !== 'UPMD');
+                return r.Unit === unitName;
+            });
+
+            const total = unitRecords.length;
+            const complete = unitRecords.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval').length;
+            const approve = unitRecords.filter(r => r.Status === 'Approve').length;
+            const pending = total - complete - approve;
+            const percent = total > 0 ? Math.round(((complete + approve) / total) * 100) : 0;
+
+            document.getElementById('ud-total').textContent = total.toLocaleString();
+            document.getElementById('ud-pending').textContent = pending.toLocaleString();
+            document.getElementById('ud-complete').textContent = complete.toLocaleString();
+            document.getElementById('ud-approve').textContent = approve.toLocaleString();
+            document.getElementById('ud-percent').textContent = percent + '%';
+            document.getElementById('ud-progress').style.width = percent + '%';
         }
 
         function updateKPIs() {
-            const validData = tableData.filter(r => r.Status === 'Complete' || (r.Bahan && r.Bahan.includes('LEADER')));
+            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || (r.Bahan && r.Bahan.includes('LEADER')));
             
             const total = validData.length;
-            const complete = validData.filter(r => r.Status === 'Complete').length;
+            const complete = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
             const pending = total - complete;
             
-            // KPI HANYA MENGIRA 10 STAF RASMI SAHAJA 
             const predefinedStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
             
             document.getElementById('kpi-total').textContent = total.toLocaleString();
             document.getElementById('kpi-complete').textContent = complete.toLocaleString();
             document.getElementById('kpi-pending').textContent = pending.toLocaleString();
-            document.getElementById('kpi-editors').textContent = predefinedStaff.length.toLocaleString(); // Sepatutnya 10
+            document.getElementById('kpi-editors').textContent = predefinedStaff.length.toLocaleString(); 
             document.getElementById('total-loaded').textContent = tableData.length.toLocaleString();
         }
 
@@ -667,9 +953,11 @@
             tableData.forEach(r => {
                 const isFragment = !(r.Bahan && r.Bahan.includes('LEADER'));
 
-                if (r.Status === 'Complete') {
+                if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') {
                     comp++;
-                } else if (!isFragment) {
+                } 
+                
+                if (!isFragment) {
                     const u = r.Unit;
                     if (u === 'UPK') upk++;
                     else if (u === 'UPKK') upkk++;
@@ -683,10 +971,12 @@
             document.getElementById('count-upmd').textContent = upmd.toLocaleString();
             document.getElementById('count-item').textContent = item.toLocaleString();
             document.getElementById('count-complete').textContent = comp.toLocaleString();
+            
+            const subfolderCount = document.getElementById('subfolder-count-item');
+            if(subfolderCount) subfolderCount.textContent = item.toLocaleString();
         }
 
         function populateFilters() {
-            // HANYA GUNAKAN 10 NAMA RASMI TANPA MENGAMBIL SECARA RAWAK DARI TABLE DATA
             const validStaff = listEditors.filter(e => e !== 'Sistem' && e !== 'Library admin');
             dynamicEditors = validStaff; 
 
@@ -705,21 +995,19 @@
                 const matchEditor = editor === 'All' || row.Editor === editor;
                 
                 let matchUnit = false;
-                const isComp = (row.Status === 'Complete');
                 const isFragment = !(row.Bahan && row.Bahan.includes('LEADER'));
 
                 if (activeUnit === 'Complete') {
-                    matchUnit = isComp; 
+                    matchUnit = (row.Status === 'Complete' || row.Status === 'Awaiting approval' || row.Status === 'Approve'); 
                 } else if (activeUnit === 'Item') {
-                    matchUnit = !isComp && !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                    matchUnit = !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
                 } else {
-                    matchUnit = !isComp && !isFragment && (row.Unit === activeUnit);
+                    matchUnit = !isFragment && (row.Unit === activeUnit);
                 }
                 
                 return matchSearch && matchEditor && matchUnit;
             });
             
-            // FUNGSI SUSUNAN MENGIKUT TARIKH TERKINI HANYA UNTUK FOLDER COMPLETE
             if (activeUnit === 'Complete') {
                 filteredData.sort((a, b) => {
                     const parseDate = (dStr) => {
@@ -731,8 +1019,8 @@
                     let valA = parseDate(a.Date);
                     let valB = parseDate(b.Date);
                     
-                    if (valB !== valA) return valB - valA; // Tarikh terbaru berada di atas (Descending)
-                    return b.RowIdx - a.RowIdx; // Jika tarikh sama, ambil rekod yang paling lambat diproses
+                    if (valB !== valA) return valB - valA; 
+                    return b.RowIdx - a.RowIdx; 
                 });
             }
 
@@ -744,20 +1032,16 @@
         DOM.filterEditor.addEventListener('change', applyFilters);
 
         function renderTable() {
-            // SIMPAN kedudukan scroll semasa supaya jadual tak berlompat ke atas secara automatik
             const tableContainer = document.querySelector('.overflow-auto.bg-white');
             const currentScroll = tableContainer ? tableContainer.scrollTop : 0;
 
-            // KIRA JUMLAH REKOD KESELURUHAN DALAM FOLDER SEMASA (TANPA DIPENGARUHI OLEH FUNGSI SEARCH)
             let folderTotal = tableData.filter(row => {
-                const isComp = (row.Status === 'Complete');
                 const isFragment = !(row.Bahan && row.Bahan.includes('LEADER'));
-                if (activeUnit === 'Complete') return isComp;
-                if (activeUnit === 'Item') return !isComp && !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
-                return !isComp && !isFragment && (row.Unit === activeUnit);
+                if (activeUnit === 'Complete') return (row.Status === 'Complete' || row.Status === 'Awaiting approval' || row.Status === 'Approve');
+                if (activeUnit === 'Item') return !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                return !isFragment && (row.Unit === activeUnit);
             }).length;
 
-            // KEMASKINI TAJUK BERSAMA JUMLAH FOLDER SECARA LANGSUNG (LIVE)
             let baseTitle = '';
             if (activeUnit === 'Item') baseTitle = 'ITEM (New/Unassigned)';
             else if (activeUnit === 'Complete') baseTitle = 'COMPLETED ARCHIVE';
@@ -765,7 +1049,6 @@
             
             const titleEl = document.getElementById('current-unit-title');
             if (titleEl) {
-                // Dimasukkan ke dalam span biru pudar untuk design harmoni
                 titleEl.innerHTML = `Folder: ${baseTitle} <span class="text-blue-600 text-xl ml-1 tracking-normal font-bold">(${folderTotal.toLocaleString()})</span>`;
             }
 
@@ -776,15 +1059,45 @@
             const endIndex = startIndex + rowsPerPage;
             const paginatedData = filteredData.slice(startIndex, endIndex);
 
-            const rowsHTML = paginatedData.map(row => {
-                const isComplete = (row.Status === 'Complete');
-                const statusClass = isComplete ? 'text-emerald-700 bg-emerald-50 border-emerald-200 focus:ring-emerald-500/30' : 'text-red-700 bg-red-50 border-red-200 focus:ring-red-500/30';
+            const rowsHTML = paginatedData.map((row, index) => {
+                const statusClean = row.Status || 'Pending';
+                
+                let statusClass = 'text-red-700 bg-red-50 border-red-200 focus:ring-red-500/30';
+                if (statusClean === 'Complete') statusClass = 'text-emerald-700 bg-emerald-50 border-emerald-200 focus:ring-emerald-500/30';
+                if (statusClean === 'Awaiting approval') statusClass = 'text-amber-700 bg-amber-50 border-amber-200 focus:ring-amber-500/30';
+                if (statusClean === 'Approve') statusClass = 'text-blue-700 bg-blue-50 border-blue-200 focus:ring-blue-500/30';
+                
                 const dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
                 
-                // JIKA DALAM ADMIN EDIT MODE, BIARKAN KOTAK DROPDOWN BOLEH DIUBAH WALAUPUN RECORD TELAH COMPLETE
+                let finalDet = '<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1.5 rounded border border-red-200 shadow-sm block w-max">Pending Correction</span>';
+                if (statusClean === 'Complete') finalDet = '<span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1.5 rounded border border-emerald-200 shadow-sm block w-max">Resolved by Editor</span>';
+                if (statusClean === 'Awaiting approval') finalDet = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Pending Verification</span>';
+                if (statusClean === 'Approve') finalDet = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Verified Accepted</span>';
+                
                 let isEditorLocked = false;
+                let isStatusLocked = false;
                 if (!isAdminEditMode) {
-                    isEditorLocked = row.Editor && row.Editor !== 'Sistem';
+                    isEditorLocked = (row.Editor && row.Editor !== 'Sistem') || (statusClean !== 'Pending');
+                    isStatusLocked = (statusClean !== 'Pending');
+                }
+
+                let statusOptionsHTML = '';
+                if (isAdminEditMode) {
+                    statusOptionsHTML = `
+                        <option value="Pending" ${statusClean === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Complete" ${statusClean === 'Complete' ? 'selected' : ''}>Complete</option>
+                        <option value="Awaiting approval" ${statusClean === 'Awaiting approval' ? 'selected' : ''}>Awaiting approval</option>
+                        <option value="Approve" ${statusClean === 'Approve' ? 'selected' : ''}>Approve</option>
+                    `;
+                } else {
+                    if (statusClean === 'Pending') {
+                        statusOptionsHTML = `
+                            <option value="Pending" selected>Pending</option>
+                            <option value="Complete">Complete</option>
+                        `;
+                    } else {
+                        statusOptionsHTML = `<option value="${statusClean}" selected>${statusClean}</option>`;
+                    }
                 }
 
                 const editorSelectClass = isEditorLocked 
@@ -793,34 +1106,40 @@
 
                 const defaultSelectClass = "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50";
 
+                const finalStatusSelectClass = isStatusLocked 
+                    ? "w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner"
+                    : `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass}`;
+
+                const displayNo = startIndex + index + 1;
+
                 return `
-                <tr class="table-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors" data-rowidx="${row.RowIdx}" data-bil="${row.Bil}">
-                    <td class="px-5 py-5 font-bold text-slate-900 align-top">${row.Bil}</td>
-                    <td class="px-5 py-5 font-mono text-[11px] text-emerald-600 font-semibold align-top">${dateHarvest}</td>
+                <tr class="table-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors" data-rowidx="${row.RowIdx}" data-bil="${displayNo}">
+                    <td class="px-5 py-5 font-bold text-slate-900 align-top text-center">${displayNo}</td>
+                    <td class="px-5 py-5 font-mono text-[11px] text-emerald-600 font-semibold align-top text-center">${dateHarvest}</td>
                     <td class="px-5 py-5 align-top max-w-[300px]">
                         ${formatBahanColumn(row.Bahan)}
                         <button onclick="viewDetails('${row.RowIdx}')" class="text-blue-600 hover:text-white hover:bg-blue-600 text-[10px] font-bold flex items-center gap-1.5 transition-all bg-blue-50/50 border border-blue-200 hover:border-blue-600 px-3 py-1.5 rounded-lg inline-flex mt-2 shadow-sm">
                             <i data-lucide="eye" class="w-3.5 h-3.5"></i> View MARC Details
                         </button>
                     </td>
-                    <td class="px-5 py-5 align-top" title="Double-click to unlock" ondblclick="unlockEditor(this)">
+                    <td class="px-5 py-5 align-top text-center" title="Double-click to unlock" ondblclick="unlockEditor(this)">
                         <select class="${editorSelectClass}" data-field="Editor" ${isEditorLocked ? 'disabled' : ''}>
                             <option value="Sistem">Sistem</option>
                             ${generateOptions(dynamicEditors, row.Editor)}
                         </select>
                     </td>
-                    <td class="px-5 py-5 align-top">
+                    <td class="px-5 py-5 align-top text-center">
                         <select class="${defaultSelectClass}" data-field="Unit">
                             ${generateOptions(listUnits, row.Unit)}
                         </select>
                     </td>
-                    <td class="px-5 py-5 align-top">
-                        <select class="w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass}" data-field="Status">
-                            <option value="Pending" ${!isComplete ? 'selected' : ''}>Pending</option>
-                            <option value="Complete" ${isComplete ? 'selected' : ''}>Complete</option>
+                    <td class="px-5 py-5 align-top text-center">
+                        <select class="${finalStatusSelectClass}" data-field="Status" ${isStatusLocked ? 'disabled' : ''}>
+                            ${statusOptionsHTML}
                         </select>
                     </td>
-                    <td class="px-5 py-5 text-slate-500 font-mono text-[11px] font-semibold date-col align-top">${row.Date || '-'}</td>
+                    <td class="px-5 py-5 align-top leading-tight flex justify-center final-det-cell">${finalDet}</td>
+                    <td class="px-5 py-5 text-slate-500 font-mono text-[11px] font-semibold date-col align-top text-center">${row.Date || '-'}</td>
                 </tr>`;
             }).join('');
 
@@ -832,7 +1151,6 @@
             DOM.btnPrev.disabled = currentPage === 1;
             DOM.btnNext.disabled = currentPage === totalPages || totalPages === 0;
 
-            // KEMBALIKAN posisi scroll asal (Mencegah jadual melompat ke atas ketika auto-refresh)
             if (tableContainer) tableContainer.scrollTop = currentScroll;
             
             lucide.createIcons();
@@ -849,7 +1167,7 @@
 
         DOM.tbody.addEventListener('change', async (e) => {
             if (e.target.tagName.toLowerCase() === 'select') {
-                isSaving = true; // MENGUNCI proses polling sekiranya editor sedang memilih dropdown
+                isSaving = true; 
                 
                 const select = e.target;
                 const tr = select.closest('tr');
@@ -870,7 +1188,11 @@
                 let newUnit = unitSelect.value;
                 let newDate = record.Date;
 
-                if (field === 'Status' && newStatus === 'Complete') {
+                if (field === 'Status' && newStatus === 'Complete' && !isAdminEditMode) {
+                    newStatus = 'Awaiting approval';
+                }
+
+                if (field === 'Status' && (newStatus === 'Complete' || newStatus === 'Awaiting approval' || newStatus === 'Approve')) {
                     const d = new Date();
                     newDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
                 }
@@ -879,18 +1201,43 @@
                 const oldStatusClass = statusSelect.className;
                 
                 if (field === 'Status') {
-                    statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newStatus === 'Complete' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`;
+                    let newClass = 'text-red-700 bg-red-50 border-red-200';
+                    if (newStatus === 'Complete') newClass = 'text-emerald-700 bg-emerald-50 border-emerald-200';
+                    if (newStatus === 'Awaiting approval') newClass = 'text-amber-700 bg-amber-50 border-amber-200';
+                    if (newStatus === 'Approve') newClass = 'text-blue-700 bg-blue-50 border-blue-200';
+                    
+                    if (!isAdminEditMode && newStatus !== 'Pending') {
+                        statusSelect.innerHTML = `<option value="${newStatus}" selected>${newStatus}</option>`;
+                        statusSelect.className = `w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner`;
+                    } else {
+                        statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newClass}`;
+                    }
                     dateCol.textContent = newDate || '-';
+                    
+                    let finalDetHTML = '<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1.5 rounded border border-red-200 shadow-sm block w-max">Pending Correction</span>';
+                    if (newStatus === 'Complete') finalDetHTML = '<span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1.5 rounded border border-emerald-200 shadow-sm block w-max">Resolved by Editor</span>';
+                    if (newStatus === 'Awaiting approval') finalDetHTML = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Pending Verification</span>';
+                    if (newStatus === 'Approve') finalDetHTML = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Verified Accepted</span>';
+                    
+                    const finalDetCell = tr.querySelector('.final-det-cell');
+                    if (finalDetCell) finalDetCell.innerHTML = finalDetHTML;
                 }
                 tr.style.opacity = '0.5';
                 select.disabled = true; 
 
-                // LALUKAN ISADMINEDITMODE BAGI MEMBENARKAN OVERRIDE
                 const success = await saveRecord(rowIdx, newStatus, newDate, newEditor, newUnit, isAdminEditMode);
 
                 if (success) {
                     tr.style.opacity = '1';
-                    select.disabled = false;
+                    
+                    if (!isAdminEditMode && newStatus !== 'Pending') {
+                        // Kunci editor juga bila status menjadi Awaiting approval
+                        editorSelect.disabled = true;
+                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner";
+                        statusSelect.disabled = true;
+                    } else {
+                        select.disabled = false;
+                    }
                     
                     record.Status = newStatus;
                     record.Date = newDate;
@@ -907,19 +1254,22 @@
                     
                     let matchesCurrentFolder = false;
                     if (activeUnit === 'Complete') {
-                        matchesCurrentFolder = (record.Status === 'Complete');
+                        matchesCurrentFolder = (record.Status === 'Complete' || record.Status === 'Awaiting approval' || record.Status === 'Approve');
                     } else if (activeUnit === 'Item') {
-                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
+                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Status !== 'Awaiting approval' && record.Status !== 'Approve' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
                     } else {
-                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit === activeUnit);
+                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Status !== 'Awaiting approval' && record.Status !== 'Approve' && record.Unit === activeUnit);
                     }
 
                     if (!matchesCurrentFolder) {
-                        applyFilters(); 
+                        if (activeUnit === 'Complete') {
+                            applyFilters(); 
+                        }
                     }
 
                     updateKPIs();
                     updateFolderCounts();
+                    if(activeUnit) updateUnitDashboard(activeUnit);
                 } else {
                     if (field === 'Status') {
                         statusSelect.value = record.Status;
@@ -933,17 +1283,15 @@
                     showToast(`Failed to update Record #${bilDisplay}.`, "error");
                 }
                 
-                isSaving = false; // MELEPASKAN KUNCI proses polling
+                isSaving = false; 
             }
         });
 
-        // TAMBAH PARAMETER adminOverride UNTUK DIHANTAR KE BACKEND
         async function saveRecord(rowIdx, status, date, editor, unit, adminOverride = false) {
             if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
                 return new Promise(r => setTimeout(() => r(true), 500)); 
             }
             try {
-                // TUKAR KEPADA GET: Masukkan semua data ke dalam URL parameter
                 const urlParams = new URLSearchParams({
                     action: 'update',
                     rowIdx: rowIdx,
@@ -951,7 +1299,7 @@
                     date: date,
                     editor: editor,
                     unit: unit,
-                    adminOverride: adminOverride // Flag baharu
+                    adminOverride: adminOverride
                 });
                 
                 const res = await fetch(`${GAS_WEB_APP_URL}?${urlParams.toString()}`, {
@@ -1001,7 +1349,7 @@
         }
 
         document.getElementById('btn-import').addEventListener('click', async () => {
-            isImporting = true; // MENGUNCI proses auto-refresh dari mengganggu proses import
+            isImporting = true; 
             closeModal('admin-modal'); 
             const loader = document.getElementById('app-loader');
             loader.querySelector('h3').textContent = "Synchronizing Errors...";
@@ -1016,7 +1364,6 @@
                     loader.style.opacity = '0';
                     setTimeout(() => loader.style.display = 'none', 500);
                 } else {
-                    // TUKAR KEPADA GET: Masukkan action ke dalam URL parameter
                     const res = await fetch(`${GAS_WEB_APP_URL}?action=import_drive`, {
                         method: 'GET'
                     });
@@ -1028,12 +1375,7 @@
                         const response = await fetch(GAS_WEB_APP_URL);
                         const resJson = await response.json();
                         if(resJson.status === 'success') {
-                            tableData = resJson.data.map(r => {
-                                r.Editor = normalizeEditorName(r.Editor);
-                                r.Status = normalizeStatus(r.Status);
-                                r.Unit = normalizeUnit(r.Unit);
-                                return r;
-                            });
+                            tableData = resJson.data.map(mapIncomingRecord);
                             if(activeUnit) applyFilters(); 
                             else showDashboard();
                         }
@@ -1046,11 +1388,51 @@
             } finally {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 500);
-                isImporting = false; // MELEPASKAN KUNCI 
+                isImporting = false; 
             }
         });
 
-        // FUNGSI BAHARU UNTUK TOGGLE ADMIN EDIT MODE
+        document.getElementById('btn-import-approve')?.addEventListener('click', async () => {
+            isImporting = true;
+            closeModal('admin-modal');
+            const loader = document.getElementById('app-loader');
+            loader.querySelector('h3').textContent = "Verifying Approved Records...";
+            loader.querySelector('p').textContent = "Checking records against approved files. This process will take some time.";
+            loader.style.opacity = '1';
+            loader.style.display = 'flex';
+
+            try {
+                if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
+                    await new Promise(r => setTimeout(r, 1500));
+                    showToast("Verification Simulation Successful.", "success");
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 500);
+                } else {
+                    const res = await fetch(`${GAS_WEB_APP_URL}?action=import_master`, { method: 'GET' });
+                    const data = await res.json();
+                    
+                    if(data.status === 'success') {
+                        showToast(data.message, "success");
+                        const response = await fetch(GAS_WEB_APP_URL);
+                        const resJson = await response.json();
+                        if(resJson.status === 'success') {
+                            tableData = resJson.data.map(mapIncomingRecord);
+                            if(activeUnit) applyFilters(); 
+                            else showDashboard();
+                        }
+                    } else {
+                        showToast(data.message, "error");
+                    }
+                }
+            } catch(e) {
+                showToast("System error: " + e.message, "error");
+            } finally {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+                isImporting = false;
+            }
+        });
+
         document.getElementById('btn-admin-mode').addEventListener('click', () => {
             isAdminEditMode = !isAdminEditMode;
             const btn = document.getElementById('btn-admin-mode');
@@ -1067,8 +1449,62 @@
             }
             lucide.createIcons();
             closeModal('admin-modal');
-            renderTable(); // Re-render table supaya Editor tidak lagi berstatus 'disabled'
+            renderTable(); 
         });
+
+        function openBrandingModal() {
+            closeModal('admin-modal');
+            setTimeout(() => openModal('branding-modal'), 300);
+        }
+
+        function processUpload(event, imgId, storageKey, isBackground = false) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Str = e.target.result;
+                    localStorage.setItem(storageKey, base64Str);
+                    const imgEl = document.getElementById(imgId);
+                    imgEl.src = base64Str;
+                    imgEl.classList.remove('hidden');
+                    
+                    const msg = isBackground ? "Background dashboard successfully uploaded!" : "Logo successfully uploaded!";
+                    showToast(msg, "success");
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function loadSavedLogos() {
+            try {
+                const savedLogoUtama = localStorage.getItem('kik_logo_utama');
+                if(savedLogoUtama) {
+                    document.getElementById('logo-utama').src = savedLogoUtama;
+                }
+                
+                const savedBg = localStorage.getItem('kik_header_bg');
+                if(savedBg) {
+                    const bgEl = document.getElementById('full-page-bg');
+                    bgEl.src = savedBg;
+                    bgEl.classList.remove('hidden');
+                }
+            } catch(e) {}
+        }
+
+        function resetLogos() {
+            localStorage.removeItem('kik_logo_utama');
+            localStorage.removeItem('kik_header_bg');
+            document.getElementById('logo-utama').src = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Coat_of_arms_of_Malaysia.svg/800px-Coat_of_arms_of_Malaysia.svg.png";
+            
+            const bgEl = document.getElementById('full-page-bg');
+            bgEl.src = "";
+            bgEl.classList.add('hidden');
+            
+            document.getElementById('upload-logo-utama').value = '';
+            document.getElementById('upload-logo-kedua').value = '';
+            
+            showToast("Branding reset to default.", "success");
+        }
 
         function unlockEditor(tdElement) {
             const selectElement = tdElement.querySelector('select');
@@ -1079,21 +1515,16 @@
             }
         }
 
-        // ==========================================
-        // PENYERAGAMAN KOTAK RALAT (ERROR BOX)
-        // ==========================================
         function formatBahanColumn(text) {
             if(!text) return '-';
             let html = '';
             
-            // Pengesanan dinamik (Dynamic Detection) untuk mencari "Error list:"
             const hasErrorList = text.toLowerCase().includes('error list:');
             
             if (hasErrorList) {
                 let errorHtml = '';
                 let jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
                 
-                // Cuba Parse JSON jika ada format yang betul
                 if (jsonMatch) {
                     try {
                         let jsonStr = jsonMatch[0].replace(/&quot;/g, '"');
@@ -1104,14 +1535,12 @@
                     }
                 }
                 
-                // FALLBACK: Jika format JSON rosak/tiada tetapi perkataan "Error list:" tetap ada
                 if (!errorHtml) {
                     let rawErrorMatch = text.match(/error list:\s*([\s\S]*?)(?=LEADER|$)/i);
                     let rawErrorText = rawErrorMatch ? rawErrorMatch[1].trim().replace(/</g, "&lt;").replace(/>/g, "&gt;") : "Error details could not be formatted.";
                     errorHtml = `<span class="text-red-700 font-bold text-[11px]">${rawErrorText}</span>`;
                 }
                 
-                // HTML structure & style yang konsisten dijamin untuk SEMUA rekod ralat
                 html += `<div class="error-box mb-2 p-2.5 bg-red-50 border border-red-100 rounded-lg shadow-inner">${errorHtml}</div>`;
             }
             
@@ -1168,7 +1597,6 @@
                 safeText = safeText.replace(`___LEADER_${index}___`, match);
             });
             
-            // Struktur yang konsisten dan kebal untuk modal pop-up juga
             safeText = safeText.replace(/Error list:\s*([\s\S]*?)(?=LEADER|$)/i, (match, errorDetails) => {
                 return `<span class="error-box text-rose-600 bg-rose-50 px-2 py-1 rounded-md font-semibold border border-rose-200 block my-2 shadow-sm">Error list:\n${errorDetails.trim()}</span>\n`;
             });
@@ -1191,14 +1619,17 @@
             const record = tableData.find(r => String(r.RowIdx) === String(rowIdx));
             if(!record) return;
 
-            document.getElementById('modal-bil').textContent = `#${record.Bil}`;
+            const displayIndex = filteredData.findIndex(r => String(r.RowIdx) === String(rowIdx));
+            const displayNo = displayIndex !== -1 ? displayIndex + 1 : '-';
+
+            document.getElementById('modal-bil').textContent = `#${displayNo}`;
             document.getElementById('modal-text').innerHTML = formatMARCForDisplay(record.Bahan);
             openModal('marc-modal');
         }
 
         function generateStatistics() {
             const container = document.getElementById('stats-container');
-            const validData = tableData.filter(r => r.Status === 'Complete' || (r.Bahan && r.Bahan.includes('LEADER')));
+            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || (r.Bahan && r.Bahan.includes('LEADER')));
             const totalRecords = validData.length;
             
             if (totalRecords === 0) {
@@ -1206,7 +1637,7 @@
                 return;
             }
 
-            const totalCompleted = validData.filter(r => r.Status === 'Complete').length;
+            const totalCompleted = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
             const overallPercent = totalRecords > 0 ? Math.round((totalCompleted / totalRecords) * 100) : 0;
 
             let editorStats = {};
@@ -1217,7 +1648,7 @@
                 if (!editorStats[ed]) editorStats[ed] = { assigned: 0, completed: 0 };
                 
                 editorStats[ed].assigned++;
-                if (r.Status === 'Complete') editorStats[ed].completed++;
+                if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') editorStats[ed].completed++;
             });
 
             const sortedEditors = Object.entries(editorStats)
@@ -1258,7 +1689,7 @@
                 if (!unitStats[un]) unitStats[un] = { total: 0, completed: 0 };
                 
                 unitStats[un].total++;
-                if (r.Status === 'Complete') unitStats[un].completed++;
+                if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') unitStats[un].completed++;
             });
 
             const sortedUnits = Object.entries(unitStats).sort((a, b) => b[1].total - a[1].total);
@@ -1359,7 +1790,7 @@
 
         function downloadStatsCSV() {
             const reportType = document.getElementById('report-type-select').value;
-            const validData = tableData.filter(r => r.Status === 'Complete' || (r.Bahan && r.Bahan.includes('LEADER')));
+            const validData = tableData.filter(r => (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') || (r.Bahan && r.Bahan.includes('LEADER')));
             const totalRecords = validData.length;
             
             if (totalRecords === 0) {
@@ -1367,7 +1798,7 @@
                 return;
             }
 
-            const totalCompleted = validData.filter(r => r.Status === 'Complete').length;
+            const totalCompleted = validData.filter(r => r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve').length;
             const overallPercent = totalRecords > 0 ? Math.round((totalCompleted / totalRecords) * 100) : 0;
 
             let csvContent = "KATALOG INDUK KEBANGSAAN (KIK) PERFORMANCE REPORT\n";
@@ -1383,7 +1814,7 @@
                     if (!editorStats[ed]) editorStats[ed] = { assigned: 0, completed: 0 };
                     
                     editorStats[ed].assigned++;
-                    if (r.Status === 'Complete') editorStats[ed].completed++;
+                    if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') editorStats[ed].completed++;
                 });
 
                 const sortedEditors = Object.entries(editorStats)
@@ -1415,7 +1846,7 @@
                     if (!unitStats[un]) unitStats[un] = { total: 0, completed: 0 };
                     
                     unitStats[un].total++;
-                    if (r.Status === 'Complete') unitStats[un].completed++;
+                    if (r.Status === 'Complete' || r.Status === 'Awaiting approval' || r.Status === 'Approve') unitStats[un].completed++;
                 });
 
                 const sortedUnits = Object.entries(unitStats).sort((a, b) => b[1].total - a[1].total);
@@ -1450,43 +1881,45 @@
             showToast(`${reportType.toUpperCase()} Report successfully downloaded.`, "success");
         }
 
-        // ==========================================
-        // FUNGSI MUAT TURUN REKOD MENGIKUT UNIT/FOLDER KE EXCEL (XLSX)
-        // DINAITAF DENGAN FORMATTING, AUTO-WIDTH, FREEZE & WRAP TEXT
-        // ==========================================
         function downloadUnitExcel() {
             if (!filteredData || filteredData.length === 0) {
                 showToast("No records to download in this folder.", "error");
                 return;
             }
 
-            // 1. Sediakan Struktur Data Array (Header + Data)
-            const headers = ["No.", "Import Date", "Material", "Editor", "Unit", "Status", "Date Completed"];
+            const headers = ["No.", "HARVEST DATE", "MATERIAL (ERROR DETAILS)", "EDITOR", "UNIT", "STATUS", "FINAL DETERMINATION", "DATE COMPLETED", "CURRENT DATE"];
             const data = [headers];
 
-            filteredData.forEach(row => {
+            filteredData.forEach((row, index) => {
                 let bahanClean = row.Bahan ? row.Bahan : '';
-                let dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
+                let dateHarvest = row['DATE HARVEST'] || '-';
                 let editorClean = row.Editor || '-';
                 let unitClean = row.Unit || '-';
                 let statusClean = row.Status || '-';
+                
+                let finalDetTxt = 'Pending Correction';
+                if (statusClean === 'Complete') finalDetTxt = 'Resolved by Editor';
+                if (statusClean === 'Awaiting approval') finalDetTxt = 'Pending Verification';
+                if (statusClean === 'Approve') finalDetTxt = 'Verified Accepted';
+
                 let dateSelesai = row.Date || '-';
+                let currentDateClean = row.CurrentDate || '-';
                 
                 data.push([
-                    row.Bil, 
+                    index + 1, 
                     dateHarvest, 
                     bahanClean, 
                     editorClean, 
                     unitClean, 
                     statusClean, 
-                    dateSelesai
+                    finalDetTxt,
+                    dateSelesai,
+                    currentDateClean
                 ]);
             });
 
-            // 2. Bina Worksheet menggunakan SheetJS
             const ws = XLSX.utils.aoa_to_sheet(data);
 
-            // 3. Auto Column Width (Ambil pjg teks maksimum utk setiap kolum)
             const colWidths = headers.map(() => 0);
             data.forEach(row => {
                 row.forEach((cell, i) => {
@@ -1497,35 +1930,27 @@
                 });
             });
 
-            // Set Auto Width (Had maksimum 50 untuk elak terlalu lebar)
             ws['!cols'] = colWidths.map(w => ({ wch: Math.min(w + 2, 50) }));
-
-            // 4. Freeze Header Row (Baris pertama tak hilang bila scroll)
             ws['!freeze'] = { xSplit: 0, ySplit: 1 };
 
-            // 5. Masukkan Formatting / Style (Bold, Center, Warna, Wrap Text)
             for (let R = 0; R < data.length; ++R) {
                 for (let C = 0; C < headers.length; ++C) {
                     const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
                     if (!ws[cellRef]) continue;
 
                     if (R === 0) {
-                        // Style untuk Header Row
                         ws[cellRef].s = {
                             font: { bold: true, color: { rgb: "000000" } },
-                            fill: { fgColor: { rgb: "E2E8F0" } }, // Warna Light Grey
+                            fill: { fgColor: { rgb: "E2E8F0" } },
                             alignment: { horizontal: "center", vertical: "center", wrapText: true }
                         };
                     } else {
-                        // Style untuk Baris Data Biasa
                         let align = { vertical: "top" };
                         
-                        // Kolum Material (C = 2) perlu wrap text supaya kemas
                         if (C === 2) {
                             align.wrapText = true;
                         } 
-                        // Kolum Nombor, Tarikh, Unit, Status diposisikan ke tengah (Center)
-                        else if (C === 0 || C === 1 || C === 4 || C === 5 || C === 6) {
+                        else if (C === 0 || C === 1 || C === 4 || C === 5 || C === 6 || C === 7 || C === 8) {
                             align.horizontal = "center";
                         }
                         
@@ -1534,7 +1959,6 @@
                 }
             }
 
-            // 6. Bina Workbook dan Download Excel Fail (.xlsx)
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Records Data");
             
@@ -1577,10 +2001,20 @@
             const sampleData = `Error list:\n[{"tag":"100$e","description":"Missing sub field 100$e - Relator term"}]\nLEADER 01071nam a2200301 a 4500001 28431003 NIH005 20250528102818.0008 250324t20012001enka 001 0 eng d020 $a0521770297$qpaperback020 $a9780521770293$qpaperback040 $aNIH$beng$cNIH$erda060 $aW 84.1090 14$aW 84.1$b.D291 2001100 10$aHunnink,M.G. Myriam245 00$aDecision making in health and medicine : $bIntegrating evidence and values /$cM.G. Myriam Hunink, Paul P. Glasziou, Joanna E. Siegel, Jane C. Weeks, Joseph S.Pliskin, Arthur S. Elstein, Milton C. Weinstein.264 1$aCambridge :$bCambridge University Press, $c2001264 4$c©2001300 $axvi, 388 pages :$billustrations ;$c25 cm.$e1 CD-ROM (4 3/4 in.)336 $atext$2rdacontent337 $aunmediated$2rdamedia338 $avolume$2rdacarrier504 $a Includes bibliographical references and index700 1 $aGlasziou, Paul P.856 $uhttps://library.nih.gov.my942 $2NLM$n0$cOS999 $c28431$d28431999 $aBK00078309`;
             return Array.from({length: count}, (_, i) => {
                 const isComplete = Math.random() > 0.8;
+                const isApprove = !isComplete && Math.random() > 0.9;
+                let statusLabel = "Pending";
+                if (isComplete) statusLabel = "Complete";
+                if (isApprove) statusLabel = "Approve";
+                
+                const isRepeated = Math.random() > 0.7;
+                let mockTerkini = `0${Math.floor(Math.random() * 9) + 1}/03/2026`;
+                if(isRepeated) mockTerkini += `, 12/03/2026`;
+
                 return {
-                    RowIdx: i + 2, Bil: i + 1, "DATE HARVEST": `0${Math.floor(Math.random() * 9) + 1}/03/2026`, 
-                    Bahan: sampleData, Editor: listEditors[Math.floor(Math.random() * listEditors.length)],
-                    Unit: listUnits[Math.floor(Math.random() * listUnits.length)], Status: isComplete ? "Complete" : "Pending", Date: isComplete ? "08/03/2026" : ""
+                    RowIdx: i + 2, "HARVEST DATE": `0${Math.floor(Math.random() * 9) + 1}/03/2026`, 
+                    "MATERIAL (ERROR DETAILS)": sampleData, EDITOR: listEditors[Math.floor(Math.random() * listEditors.length)],
+                    UNIT: listUnits[Math.floor(Math.random() * listUnits.length)], STATUS: statusLabel, "DATE COMPLETED": (isComplete || isApprove) ? "08/03/2026" : "",
+                    "CURRENT DATE": mockTerkini
                 };
             }).reverse(); 
         }
