@@ -712,6 +712,7 @@
         let isPolling = false;
         let isAdminEditMode = false; 
         let currentTab = 'tasks';
+        let lastSaveTime = 0; // Tambah penjejak masa simpanan
         
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
         
@@ -797,8 +798,8 @@
                 Editor: normalizeEditorName(r['EDITOR'] || r['Editor']),
                 Unit: normalizeUnit(r['UNIT'] || r['Unit']),
                 Status: normalizeStatus(r['STATUS'] || r['Status']),
-                FinalDet: (r['FINAL DETERMINATION'] || r['Final Determination'] || 'Pending Correction').toString().trim(),
-                Date: r['DATE COMPLETED'] || r['Date Completed'] || r['Date'] || '',
+                FinalDet: (r['FINAL DETERMINATION'] || r['Final Determination'] || '-').toString().trim(),
+                Date: r['DATE COMPLETED'] || r['Date Completed'] || r['DATE'] || r['Date'] || '',
                 CurrentDate: r['CURRENT DATE'] || r['Current Date'] || r['TarikhTerkini'] || ''
             };
         }
@@ -832,7 +833,8 @@
         }
         
         async function pollBackgroundData() {
-            if (isPolling || isSaving || isImporting || document.querySelector('.is-editing') || (document.activeElement && document.activeElement.closest('#table-body'))) {
+            // Hentikan sync sementara jika sedang edit ATAU dalam masa 10 saat selepas butang save ditekan
+            if (isPolling || isSaving || isImporting || document.querySelector('.is-editing') || (document.activeElement && document.activeElement.closest('#table-body')) || (Date.now() - lastSaveTime < 10000)) {
                 return;
             }
             
@@ -1191,8 +1193,8 @@
                             ${statusOptionsHTML}
                         </select>
                     </td>
-                    <td class="px-5 py-5 align-top leading-tight flex justify-center final-det-cell">${finalDet}</td>
-                    <td class="px-5 py-5 text-slate-500 font-mono text-[10px] font-semibold date-col align-top text-center flex flex-col gap-1">${dateHtml}</td>
+                    <td class="px-5 py-5 align-top leading-tight text-center final-det-cell">${finalDet}</td>
+                    <td class="px-5 py-5 text-slate-500 font-mono text-[10px] font-semibold date-col align-top text-center">${dateHtml}</td>
                     <td class="px-5 py-5 align-top text-center">
                         ${actionHtml}
                     </td>
@@ -1338,6 +1340,7 @@
             }
             
             isSaving = false; 
+            lastSaveTime = Date.now(); // Rekodkan masa selepas simpan supaya data tidak bertindih dengan server
         }
 
         async function saveRecord(rowIdx, status, date, editor, unit, adminOverride = false) {
