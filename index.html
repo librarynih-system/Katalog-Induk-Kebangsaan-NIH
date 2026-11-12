@@ -712,7 +712,7 @@
         let isPolling = false;
         let isAdminEditMode = false; 
         let currentTab = 'tasks';
-        let lastSaveTime = 0; // Tambah penjejak masa simpanan
+        let lastSaveTime = 0; 
         
         const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
         
@@ -783,7 +783,6 @@
             return 'Auto Import';
         }
 
-        // FUNGSI BAHARU: Kenal pasti rekod sihat (Sokong format LEADER, =LDR, dan Error list)
         function isValidRecord(bahan) {
             if (!bahan) return false;
             let text = bahan.toUpperCase();
@@ -827,13 +826,11 @@
                 DOM.appLoader.style.opacity = '0';
                 setTimeout(() => DOM.appLoader.style.display = 'none', 500);
                 
-                // Polling ditukar ke 30 saat untuk elak Google rate limit akibat Live Sync
                 setInterval(pollBackgroundData, 30000); 
             }
         }
         
         async function pollBackgroundData() {
-            // Hentikan sync sementara jika sedang edit ATAU dalam masa 10 saat selepas butang save ditekan
             if (isPolling || isSaving || isImporting || document.querySelector('.is-editing') || (document.activeElement && document.activeElement.closest('#table-body')) || (Date.now() - lastSaveTime < 10000)) {
                 return;
             }
@@ -862,7 +859,6 @@
                     }
                 }
             } catch (err) {
-                // Ignore silently
             } finally {
                 isPolling = false;
             }
@@ -1123,7 +1119,6 @@
                 else if (row.FinalDet === 'Approve') finalDet = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Approve</span>';
 
                 let isLocked = (statusClean === 'Complete' || row.FinalDet === 'Approve' || row.FinalDet === 'Awaiting approval') && !isAdminEditMode;
-                // Semua dropdown dikunci (disabled) secara lalai sehingga butang edit ditekan
                 let disabledAttr = 'disabled';
                 let lockClass = 'cursor-not-allowed opacity-70 bg-slate-50 row-locked-state';
 
@@ -1150,10 +1145,8 @@
 
                 const displayNo = startIndex + index + 1;
                 
-                // Pisahkan 2 tarikh jika wujud tanda "|"
                 let dateHtml = (row.Date || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
 
-                // Action Buttons Logic (Pensel dan Tick)
                 let actionHtml = '';
                 if (isLocked) {
                     actionHtml = `<span class="text-[10px] font-bold text-slate-400"><i class="fa-solid fa-lock"></i> Locked</span>`;
@@ -1223,12 +1216,10 @@
             if (currentPage < totalPages) { currentPage++; renderTable(); }
         });
 
-        // FUNGSI BUKA KUNCI (EDIT MODE)
         function enableEditRow(rowIdx, btnEl) {
             const tr = btnEl.closest('tr');
-            tr.classList.add('is-editing'); // Halang live sync dari refresh barisan ini
+            tr.classList.add('is-editing'); 
             
-            // Buka kunci semua kotak dropdown
             const selects = tr.querySelectorAll('select');
             selects.forEach(sel => {
                 sel.removeAttribute('disabled');
@@ -1236,7 +1227,6 @@
                 sel.classList.add('cursor-pointer', 'bg-white', 'hover:bg-slate-50', 'focus:ring-2', 'focus:ring-blue-500/40', 'focus:border-blue-500');
             });
             
-            // Tukar butang Action kepada Tick (Save) dan Cross (Cancel)
             const actionContainer = tr.querySelector('.action-btns-container');
             actionContainer.innerHTML = `
                 <button onclick="saveRowAction('${rowIdx}', this)" class="bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white p-2 rounded-lg transition-colors shadow-sm" title="Save Record">
@@ -1248,12 +1238,10 @@
             `;
         }
 
-        // FUNGSI BATALKAN EDIT
         function cancelEditRow(rowIdx, btnEl) {
-            renderTable(); // Kembalikan ke state asal
+            renderTable(); 
         }
 
-        // FUNGSI SIMPAN REKOD
         async function saveRowAction(rowIdx, btnEl) {
             if(isSaving) return;
             isSaving = true;
@@ -1289,7 +1277,6 @@
 
             tr.style.opacity = '0.5';
             
-            // Kemaskini paparan sementara simpan
             dateCol.innerHTML = (newDate || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
             let finalDetHTML = '<span class="text-[10px] font-bold text-slate-400 block w-max mx-auto">-</span>';
             if (newFinalDet === 'Awaiting approval') finalDetHTML = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Awaiting approval</span>';
@@ -1340,7 +1327,7 @@
             }
             
             isSaving = false; 
-            lastSaveTime = Date.now(); // Rekodkan masa selepas simpan supaya data tidak bertindih dengan server
+            lastSaveTime = Date.now(); 
         }
 
         async function saveRecord(rowIdx, status, date, editor, unit, adminOverride = false) {
@@ -1571,16 +1558,18 @@
             }
         }
 
+        // FUNGSI DIKEMASKINI: Regex untuk menjadikan tag "error list:" kalis huruf besar/kecil dan highlight merah yang dinamik!
         function formatBahanColumn(text) {
             if(!text) return '-';
             
-            // Buang tanda ' di awal string jika ada (elak paparan serabut)
             if (text.startsWith("'")) text = text.substring(1);
 
             let html = '';
+            const errorListRegex = /error list:\s*/i;
+            const hasErrorList = errorListRegex.test(text);
             
-            const hasErrorList = text.toLowerCase().includes('error list:');
-            
+            let errorTagsList = [];
+
             if (hasErrorList) {
                 let errorHtml = '';
                 let jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
@@ -1589,6 +1578,10 @@
                     try {
                         let jsonStr = jsonMatch[0].replace(/&quot;/g, '"');
                         const errors = JSON.parse(jsonStr);
+                        
+                        // Ekstrak tag yang ada error secara dinamik!
+                        errorTagsList = [...new Set(errors.map(e => (e.tag || '').substring(0,3)).filter(t => t.length === 3))];
+
                         errorHtml = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
                     } catch(e) {
                         console.log("JSON Parse Error", e);
@@ -1596,7 +1589,7 @@
                 }
                 
                 if (!errorHtml) {
-                    let rawErrorMatch = text.match(/error list:\s*([\s\S]*?)(?=LEADER|$)/i);
+                    let rawErrorMatch = text.match(/error list:\s*([\s\S]*?)(?=LEADER|=LDR|LDR|$)/i);
                     let rawErrorText = rawErrorMatch ? rawErrorMatch[1].trim().replace(/</g, "&lt;").replace(/>/g, "&gt;") : "Error details could not be formatted.";
                     errorHtml = `<span class="text-red-700 font-bold text-[11px]">${rawErrorText}</span>`;
                 }
@@ -1613,9 +1606,18 @@
             
             if(marcText) {
                 let snippet = marcText.length > 180 ? marcText.substring(0, 180) + '...' : marcText;
-                const errorTags = ['100', '110', '245', '650', '700'];
-                const tagRegex = new RegExp(`\\b(${errorTags.join('|')})\\b`, 'g');
-                snippet = snippet.replace(tagRegex, '<span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300 font-bold">$1</span>');
+                
+                if (errorTagsList.length > 0) {
+                    // Highlight dengan MERAH secara dinamik berdasarkan tag UPMD/UPK yang sebenar
+                    const tagRegex = new RegExp(`(^|\\b)(${errorTagsList.join('|')})\\b`, 'g');
+                    snippet = snippet.replace(tagRegex, '$1<span class="bg-red-100 text-red-800 px-1 py-0.5 rounded border border-red-300 font-bold">$2</span>');
+                } else {
+                    // Highlight asas kalau format tidak dijumpai
+                    const errorTags = ['100', '110', '245', '650', '700'];
+                    const tagRegex = new RegExp(`\\b(${errorTags.join('|')})\\b`, 'g');
+                    snippet = snippet.replace(tagRegex, '<span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300 font-bold">$1</span>');
+                }
+
                 html += `<div class="text-[11px] text-slate-500 font-mono leading-relaxed line-clamp-3 bg-slate-50 p-2 rounded-lg border border-slate-100">${snippet}</div>`;
             }
             return html;
@@ -1629,14 +1631,12 @@
         }
 
         function formatMARCForDisplay(text) {
-            // 1. Buang tanda ' di awal string jika ada (mengelakkan paparan ralat formula Google Sheet)
             if (text.startsWith("'")) text = text.substring(1);
             
             let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             let errorBoxHtml = '';
             let errorTagsList = [];
             
-            // 2. Ekstrak dan format "Error list:" jika wujud di dalam teks
             const errorListRegex = /Error list:\s*(\[[\s\S]*?\])?\s*/i;
             let errorMatch = safeText.match(errorListRegex);
             
@@ -1646,18 +1646,15 @@
                     try {
                         const errors = JSON.parse(jsonStr.replace(/&quot;/g, '"'));
                         
-                        // Ekstrak tag-tag yang bermasalah (3 digit pertama cth: 100$e jadi 100)
                         errorTagsList = [...new Set(errors.map(e => (e.tag || '').substring(0,3)).filter(t => t.length === 3))];
 
                         let errorDetails = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
                         errorBoxHtml = `<div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg shadow-inner block">${errorDetails}</div>`;
                     } catch(e) {}
                 }
-                // Padam bahagian ralat dari teks asal supaya tak berulang
                 safeText = safeText.replace(errorListRegex, '').trim();
             }
 
-            // 3. Kemaskan teks MARC secara natural macam dalam Google Sheet
             let lines = safeText.split('\n');
             let formattedLines = lines.map(line => {
                 let isErrorLine = false;
@@ -1666,9 +1663,7 @@
                     isErrorLine = true;
                 }
 
-                // Highlight Tag Utama (cth: =LDR, =001, 100) di awal baris
                 line = line.replace(/^(=?[A-Za-z0-9]{3})\s/, '<span class="text-blue-600 font-bold mr-1">$1</span> ');
-                // Highlight Subfield (cth: $a, $b)
                 line = line.replace(/(\$[a-z0-9])/gi, '<span class="text-emerald-600 font-bold mx-px">$1</span>');
                 
                 if (isErrorLine) {
