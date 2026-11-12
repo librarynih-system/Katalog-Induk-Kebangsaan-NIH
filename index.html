@@ -1587,9 +1587,9 @@
                 }
                 
                 // Fallback: Ekstrak secara paksa sebarang 3-digit nombor dari teks error (untuk UPMD & UPKK)
-                let rawTags = errText.match(/(?:^|\b)(\d{3})(?=[^\d]|$)/g);
+                let rawTags = errText.match(/(?:^|\b)([0-9][0-9Xx]{2})(?=[^\w]|$)/gi);
                 if (rawTags) {
-                    rawTags.forEach(t => errorTagsList.push(t.trim()));
+                    rawTags.forEach(t => errorTagsList.push(t.trim().toUpperCase()));
                 }
                 errorTagsList = [...new Set(errorTagsList)]; // Buang duplicate
                 
@@ -1597,7 +1597,7 @@
                 if (!errorHtml) {
                     let cleanErrText = errText.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     // Tambahkan kotak merah pada tag di dalam teks ralat
-                    cleanErrText = cleanErrText.replace(/(^|\b)(\d{3}(\$[a-z0-9])?)\b/g, '<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">$2</span>');
+                    cleanErrText = cleanErrText.replace(/(^|\b)([0-9][0-9Xx]{2}(\$[a-z0-9])?)\b/gi, '<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">$2</span>');
                     errorHtml = `<span class="text-red-700 font-bold text-[11px] block whitespace-pre-wrap">${cleanErrText}</span>`;
                 }
                 
@@ -1664,14 +1664,14 @@
                 }
                 
                 // Tambah sokongan pengekstrakan tag teks biasa (UPMD/UPKK)
-                let rawTags = errText.match(/(?:^|\b)(\d{3})(?=[^\d]|$)/g);
+                let rawTags = errText.match(/(?:^|\b)([0-9][0-9Xx]{2})(?=[^\w]|$)/gi);
                 if (rawTags) {
-                    rawTags.forEach(t => errorTagsList.push(t.trim()));
+                    rawTags.forEach(t => errorTagsList.push(t.trim().toUpperCase()));
                 }
                 errorTagsList = [...new Set(errorTagsList)];
 
                 if (!errorDetails) {
-                    errorDetails = errText.trim().replace(/(^|\b)(\d{3}(\$[a-z0-9])?)\b/g, '<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">$2</span>');
+                    errorDetails = errText.trim().replace(/(^|\b)([0-9][0-9Xx]{2}(\$[a-z0-9])?)\b/gi, '<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">$2</span>');
                 }
 
                 errorBoxHtml = `<div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg shadow-inner block whitespace-pre-wrap">${errorDetails}</div>`;
