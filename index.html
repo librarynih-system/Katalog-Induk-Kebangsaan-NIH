@@ -482,11 +482,11 @@
             </div>
 
             <!-- NEW TABS FOR UNIT (Tasks vs Approved) -->
-            <div id="unit-tabs" class="hidden gap-8 border-b border-slate-200 px-6 mt-2 font-sans shrink-0">
-                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="pb-3 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-colors flex items-center gap-2">
-                    <i class="fa-solid fa-list-check"></i> Pending & Verification
+            <div id="unit-tabs" class="hidden gap-4 border-b border-slate-200 px-6 mt-4 pb-4 font-sans shrink-0">
+                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="px-5 py-2.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-md transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-list-check"></i> Pending & Awaiting approval
                 </button>
-                <button onclick="switchTab('approved')" id="tab-btn-approved" class="pb-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2">
+                <button onclick="switchTab('approved')" id="tab-btn-approved" class="px-5 py-2.5 rounded-full text-sm font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors flex items-center gap-2">
                     <i class="fa-solid fa-shield-check"></i> Approved Records
                 </button>
             </div>
@@ -507,12 +507,13 @@
                             <tr>
                                 <th class="px-5 py-4 w-[4%] text-center">No.</th>
                                 <th class="px-5 py-4 w-[10%] text-emerald-700 text-center">Harvest Date</th>
-                                <th class="px-5 py-4 w-[38%] text-center">Material (Error Details)</th>
+                                <th class="px-5 py-4 w-[36%] text-center">Material (Error Details)</th>
                                 <th class="px-5 py-4 w-[12%] text-center">Editor</th>
                                 <th class="px-5 py-4 w-[8%] text-center">Unit</th>
                                 <th class="px-5 py-4 w-[10%] text-center">Status</th>
                                 <th class="px-5 py-4 w-[10%] text-center">Final Determination</th>
-                                <th class="px-5 py-4 w-[8%] text-center">Date</th>
+                                <th class="px-5 py-4 w-[10%] text-center">Date</th>
+                                <th class="px-5 py-4 w-[8%] text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="table-body" class="text-xs divide-y divide-slate-100 text-slate-600">
@@ -696,7 +697,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxp7-DKAyA2MZQq2yD2h78wG8T4fwu-7vMeLNaFwjYVUCRaJOO4kJLLxeTbtq56gjm1ag/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBG6c4h2P7BiMFCw1gtj4z4IJuE0WycyzBKC_RG_XGa8UoPVu609C48U2CeeLH2fDmYQ/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -831,7 +832,7 @@
         }
         
         async function pollBackgroundData() {
-            if (isPolling || isSaving || isImporting || (document.activeElement && document.activeElement.closest('#table-body'))) {
+            if (isPolling || isSaving || isImporting || document.querySelector('.is-editing') || (document.activeElement && document.activeElement.closest('#table-body'))) {
                 return;
             }
             
@@ -882,11 +883,11 @@
             const btnApprove = document.getElementById('tab-btn-approved');
             
             if (tabName === 'tasks') {
-                btnTasks.className = "pb-3 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-colors flex items-center gap-2";
-                btnApprove.className = "pb-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2";
+                btnTasks.className = "px-5 py-2.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-md transition-colors flex items-center gap-2";
+                btnApprove.className = "px-5 py-2.5 rounded-full text-sm font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors flex items-center gap-2";
             } else {
-                btnApprove.className = "pb-3 text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition-colors flex items-center gap-2";
-                btnTasks.className = "pb-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-2";
+                btnApprove.className = "px-5 py-2.5 rounded-full text-sm font-bold bg-indigo-600 text-white shadow-md transition-colors flex items-center gap-2";
+                btnTasks.className = "px-5 py-2.5 rounded-full text-sm font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors flex items-center gap-2";
             }
             applyFilters();
         }
@@ -1111,23 +1112,18 @@
             const rowsHTML = paginatedData.map((row, index) => {
                 const statusClean = row.Status || 'Pending';
                 
-                let statusClass = 'text-red-700 bg-red-50 border-red-200 focus:ring-red-500/30';
-                if (statusClean === 'Complete') statusClass = 'text-emerald-700 bg-emerald-50 border-emerald-200 focus:ring-emerald-500/30';
+                const statusClass = statusClean === 'Complete' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200';
                 
                 const dateHarvest = row['DATE HARVEST'] || row['Date Harvest'] || row.DATE_HARVEST || '-';
                 
-                let finalDet = '<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1.5 rounded border border-red-200 shadow-sm block w-max">Pending Correction</span>';
+                let finalDet = '<span class="text-[10px] font-bold text-slate-400 block w-max mx-auto">-</span>';
                 if (row.FinalDet === 'Awaiting approval') finalDet = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Awaiting approval</span>';
-                if (row.FinalDet === 'Approve') finalDet = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Approve</span>';
-                
-                let isEditorLocked = false;
-                let isStatusLocked = false;
-                let isUnitLocked = false;
-                if (!isAdminEditMode) {
-                    isEditorLocked = (row.Editor && row.Editor !== 'Sistem') || (statusClean !== 'Pending');
-                    isStatusLocked = (statusClean !== 'Pending');
-                    isUnitLocked = (statusClean !== 'Pending');
-                }
+                else if (row.FinalDet === 'Approve') finalDet = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Approve</span>';
+
+                let isLocked = (statusClean === 'Complete' || row.FinalDet === 'Approve' || row.FinalDet === 'Awaiting approval') && !isAdminEditMode;
+                // Semua dropdown dikunci (disabled) secara lalai sehingga butang edit ditekan
+                let disabledAttr = 'disabled';
+                let lockClass = 'cursor-not-allowed opacity-70 bg-slate-50 row-locked-state';
 
                 let statusOptionsHTML = '';
                 if (isAdminEditMode) {
@@ -1146,22 +1142,28 @@
                     }
                 }
 
-                const editorSelectClass = isEditorLocked 
-                    ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center" 
-                    : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50 text-center";
-
-                const unitSelectClass = isUnitLocked 
-                    ? "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center" 
-                    : "data-select w-full border border-slate-200 text-[11px] font-bold text-slate-700 bg-white rounded-xl px-3 py-2.5 cursor-pointer focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none shadow-sm transition-all hover:bg-slate-50 text-center";
-
-                const finalStatusSelectClass = isStatusLocked 
-                    ? "w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner text-center"
-                    : `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${statusClass} text-center`;
+                const editorSelectClass = `data-select w-full border border-slate-200/80 text-[11px] font-bold text-slate-700 rounded-xl px-3 py-2.5 outline-none shadow-sm transition-all text-center ${lockClass}`;
+                const unitSelectClass = `data-select w-full border border-slate-200/80 text-[11px] font-bold text-slate-700 rounded-xl px-3 py-2.5 outline-none shadow-sm transition-all text-center ${lockClass}`;
+                const finalStatusSelectClass = `data-select w-full border border-slate-200/80 text-[11px] font-extrabold rounded-xl px-3 py-2.5 outline-none shadow-sm transition-all text-center ${statusClass} ${lockClass}`;
 
                 const displayNo = startIndex + index + 1;
                 
                 // Pisahkan 2 tarikh jika wujud tanda "|"
                 let dateHtml = (row.Date || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
+
+                // Action Buttons Logic (Pensel dan Tick)
+                let actionHtml = '';
+                if (isLocked) {
+                    actionHtml = `<span class="text-[10px] font-bold text-slate-400"><i class="fa-solid fa-lock"></i> Locked</span>`;
+                } else {
+                    actionHtml = `
+                        <div class="flex items-center justify-center gap-2 action-btns-container">
+                            <button onclick="enableEditRow('${row.RowIdx}', this)" class="bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white p-2 rounded-lg transition-colors shadow-sm" title="Edit Record">
+                                <i class="fa-solid fa-pencil"></i>
+                            </button>
+                        </div>
+                    `;
+                }
 
                 return `
                 <tr class="table-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors" data-rowidx="${row.RowIdx}" data-bil="${displayNo}">
@@ -1173,24 +1175,27 @@
                             <i data-lucide="eye" class="w-3.5 h-3.5"></i> View MARC Details
                         </button>
                     </td>
-                    <td class="px-5 py-5 align-top text-center" title="Double-click to unlock" ondblclick="unlockEditor(this)">
-                        <select class="${editorSelectClass}" data-field="Editor" ${isEditorLocked ? 'disabled' : ''}>
+                    <td class="px-5 py-5 align-top text-center">
+                        <select class="${editorSelectClass}" data-field="Editor" ${disabledAttr}>
                             <option value="Sistem">Sistem</option>
                             ${generateOptions(dynamicEditors, row.Editor)}
                         </select>
                     </td>
                     <td class="px-5 py-5 align-top text-center">
-                        <select class="${unitSelectClass}" data-field="Unit" ${isUnitLocked ? 'disabled' : ''}>
+                        <select class="${unitSelectClass}" data-field="Unit" ${disabledAttr}>
                             ${generateOptions(listUnits, row.Unit)}
                         </select>
                     </td>
                     <td class="px-5 py-5 align-top text-center">
-                        <select class="${finalStatusSelectClass}" data-field="Status" ${isStatusLocked ? 'disabled' : ''}>
+                        <select class="${finalStatusSelectClass}" data-field="Status" ${disabledAttr}>
                             ${statusOptionsHTML}
                         </select>
                     </td>
                     <td class="px-5 py-5 align-top leading-tight flex justify-center final-det-cell">${finalDet}</td>
                     <td class="px-5 py-5 text-slate-500 font-mono text-[10px] font-semibold date-col align-top text-center flex flex-col gap-1">${dateHtml}</td>
+                    <td class="px-5 py-5 align-top text-center">
+                        ${actionHtml}
+                    </td>
                 </tr>`;
             }).join('');
 
@@ -1216,129 +1221,124 @@
             if (currentPage < totalPages) { currentPage++; renderTable(); }
         });
 
-        DOM.tbody.addEventListener('change', async (e) => {
-            if (e.target.tagName.toLowerCase() === 'select') {
-                isSaving = true; 
+        // FUNGSI BUKA KUNCI (EDIT MODE)
+        function enableEditRow(rowIdx, btnEl) {
+            const tr = btnEl.closest('tr');
+            tr.classList.add('is-editing'); // Halang live sync dari refresh barisan ini
+            
+            // Buka kunci semua kotak dropdown
+            const selects = tr.querySelectorAll('select');
+            selects.forEach(sel => {
+                sel.removeAttribute('disabled');
+                sel.classList.remove('cursor-not-allowed', 'opacity-70', 'bg-slate-50', 'row-locked-state');
+                sel.classList.add('cursor-pointer', 'bg-white', 'hover:bg-slate-50', 'focus:ring-2', 'focus:ring-blue-500/40', 'focus:border-blue-500');
+            });
+            
+            // Tukar butang Action kepada Tick (Save) dan Cross (Cancel)
+            const actionContainer = tr.querySelector('.action-btns-container');
+            actionContainer.innerHTML = `
+                <button onclick="saveRowAction('${rowIdx}', this)" class="bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white p-2 rounded-lg transition-colors shadow-sm" title="Save Record">
+                    <i class="fa-solid fa-check"></i>
+                </button>
+                <button onclick="cancelEditRow('${rowIdx}', this)" class="bg-red-100 hover:bg-red-600 text-red-700 hover:text-white p-2 rounded-lg transition-colors shadow-sm" title="Cancel Edit">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+        }
+
+        // FUNGSI BATALKAN EDIT
+        function cancelEditRow(rowIdx, btnEl) {
+            renderTable(); // Kembalikan ke state asal
+        }
+
+        // FUNGSI SIMPAN REKOD
+        async function saveRowAction(rowIdx, btnEl) {
+            if(isSaving) return;
+            isSaving = true;
+            const tr = btnEl.closest('tr');
+            
+            const statusSelect = tr.querySelector('[data-field="Status"]');
+            const editorSelect = tr.querySelector('[data-field="Editor"]');
+            const unitSelect = tr.querySelector('[data-field="Unit"]');
+            const dateCol = tr.querySelector('.date-col');
+            const finalDetCell = tr.querySelector('.final-det-cell');
+            
+            const record = tableData.find(r => String(r.RowIdx) === String(rowIdx));
+            if(!record) { isSaving = false; return; }
+
+            const displayNo = tr.getAttribute('data-bil');
+
+            let newStatus = statusSelect.value;
+            let newEditor = editorSelect.value;
+            let newUnit = unitSelect.value;
+            let newDate = record.Date;
+            let newFinalDet = record.FinalDet;
+
+            if (newStatus === 'Complete' && record.Status !== 'Complete') {
+                const d = new Date();
+                const todayStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
                 
-                const select = e.target;
-                const tr = select.closest('tr');
-                const rowIdx = tr.dataset.rowidx; 
-                const bilDisplay = tr.dataset.bil; 
-                const field = select.dataset.field; 
-                
-                const record = tableData.find(r => String(r.RowIdx) === String(rowIdx));
-                if(!record) { isSaving = false; return; }
-
-                const statusSelect = tr.querySelector('[data-field="Status"]');
-                const editorSelect = tr.querySelector('[data-field="Editor"]');
-                const unitSelect = tr.querySelector('[data-field="Unit"]');
-                const dateCol = tr.querySelector('.date-col');
-                
-                let newStatus = statusSelect.value;
-                let newEditor = editorSelect.value;
-                let newUnit = unitSelect.value;
-                let newDate = record.Date;
-                let newFinalDet = record.FinalDet;
-
-                if (field === 'Status' && newStatus === 'Complete') {
-                    const d = new Date();
-                    newDate = `Editor: ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-                    newFinalDet = 'Awaiting approval';
-                } else if (field === 'Status' && newStatus === 'Pending') {
-                    newDate = '';
-                    newFinalDet = 'Pending Correction';
-                }
-
-                const oldDateHTML = dateCol.innerHTML;
-                const oldStatusClass = statusSelect.className;
-                
-                if (field === 'Status') {
-                    let newClass = 'text-red-700 bg-red-50 border-red-200';
-                    if (newStatus === 'Complete') newClass = 'text-emerald-700 bg-emerald-50 border-emerald-200';
-                    
-                    if (!isAdminEditMode && newStatus !== 'Pending') {
-                        statusSelect.innerHTML = `<option value="${newStatus}" selected>${newStatus}</option>`;
-                        statusSelect.className = `w-full border border-slate-200/80 text-[11px] font-bold text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none shadow-inner text-center`;
-                    } else {
-                        statusSelect.className = `w-full border text-[11px] font-extrabold rounded-xl px-3 py-2.5 cursor-pointer outline-none shadow-sm transition-all data-select ${newClass} text-center`;
-                    }
-                    dateCol.innerHTML = (newDate || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
-                    
-                    let finalDetHTML = '<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1.5 rounded border border-red-200 shadow-sm block w-max">Pending Correction</span>';
-                    if (newFinalDet === 'Awaiting approval') finalDetHTML = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Awaiting approval</span>';
-                    
-                    const finalDetCell = tr.querySelector('.final-det-cell');
-                    if (finalDetCell) finalDetCell.innerHTML = finalDetHTML;
-                }
-                tr.style.opacity = '0.5';
-                select.disabled = true; 
-
-                const success = await saveRecord(rowIdx, newStatus, newDate, newEditor, newUnit, isAdminEditMode);
-
-                if (success) {
-                    tr.style.opacity = '1';
-                    
-                    if (!isAdminEditMode && newStatus !== 'Pending') {
-                        editorSelect.disabled = true;
-                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
-                        unitSelect.disabled = true;
-                        unitSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
-                        statusSelect.disabled = true;
-                    } else {
-                        select.disabled = false;
-                    }
-                    
-                    record.Status = newStatus;
-                    record.Date = newDate;
-                    record.FinalDet = newFinalDet;
-                    record.Editor = normalizeEditorName(newEditor);
-                    record.Unit = normalizeUnit(newUnit);
-                    
-                    if (field === 'Editor' && record.Editor !== 'Sistem' && !isAdminEditMode) {
-                        editorSelect.disabled = true;
-                        editorSelect.className = "w-full border border-slate-200/80 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5 cursor-not-allowed appearance-none outline-none font-bold shadow-inner text-center";
-                        populateFilters();
-                    }
-                    
-                    showToast(`Record No. #${bilDisplay} successfully updated.`);
-                    
-                    let matchesCurrentFolder = false;
-                    if (activeUnit === 'Complete') {
-                        matchesCurrentFolder = (record.Status === 'Complete');
-                    } else if (activeUnit === 'Item') {
-                        matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
-                    } else {
-                        matchesCurrentFolder = (record.Unit === activeUnit);
-                        if (currentTab === 'tasks') {
-                            matchesCurrentFolder = matchesCurrentFolder && (record.FinalDet !== 'Approve');
-                        } else if (currentTab === 'approved') {
-                            matchesCurrentFolder = matchesCurrentFolder && (record.FinalDet === 'Approve');
-                        }
-                    }
-
-                    if (!matchesCurrentFolder) {
-                        applyFilters(); 
-                    }
-
-                    updateKPIs();
-                    updateFolderCounts();
-                    if(activeUnit) updateUnitDashboard(activeUnit);
-                } else {
-                    if (field === 'Status') {
-                        statusSelect.value = record.Status;
-                        statusSelect.className = oldStatusClass;
-                        dateCol.innerHTML = oldDateHTML;
-                    } else if (field === 'Editor') editorSelect.value = record.Editor;
-                    else if (field === 'Unit') unitSelect.value = record.Unit;
-                    
-                    tr.style.opacity = '1';
-                    select.disabled = false;
-                    showToast(`Failed to update Record #${bilDisplay}.`, "error");
-                }
-                
-                isSaving = false; 
+                newDate = `Editor: ${todayStr}`;
+                newFinalDet = 'Awaiting approval';
+            } else if (newStatus === 'Pending' && record.Status !== 'Pending') {
+                newDate = '';
+                newFinalDet = '-';
             }
-        });
+
+            tr.style.opacity = '0.5';
+            
+            // Kemaskini paparan sementara simpan
+            dateCol.innerHTML = (newDate || '-').split('|').map(d => `<span class="block">${d.trim()}</span>`).join('');
+            let finalDetHTML = '<span class="text-[10px] font-bold text-slate-400 block w-max mx-auto">-</span>';
+            if (newFinalDet === 'Awaiting approval') finalDetHTML = '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1.5 rounded border border-amber-200 shadow-sm block w-max">Awaiting approval</span>';
+            else if (newFinalDet === 'Approve') finalDetHTML = '<span class="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1.5 rounded border border-indigo-200 shadow-sm block w-max">Approve</span>';
+            finalDetCell.innerHTML = finalDetHTML;
+
+            const success = await saveRecord(rowIdx, newStatus, newDate, newEditor, newUnit, isAdminEditMode);
+
+            if (success) {
+                tr.style.opacity = '1';
+                tr.classList.remove('is-editing');
+                
+                record.Status = newStatus;
+                record.Date = newDate;
+                record.FinalDet = newFinalDet;
+                record.Editor = normalizeEditorName(newEditor);
+                record.Unit = normalizeUnit(newUnit);
+                
+                populateFilters();
+                showToast(`Record No. #${displayNo} successfully saved!`);
+                
+                let matchesCurrentFolder = false;
+                if (activeUnit === 'Complete') {
+                    matchesCurrentFolder = (record.Status === 'Complete');
+                } else if (activeUnit === 'Item') {
+                    matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
+                } else {
+                    matchesCurrentFolder = (record.Unit === activeUnit);
+                    if (currentTab === 'tasks') {
+                        matchesCurrentFolder = matchesCurrentFolder && (record.FinalDet !== 'Approve');
+                    } else if (currentTab === 'approved') {
+                        matchesCurrentFolder = matchesCurrentFolder && (record.FinalDet === 'Approve');
+                    }
+                }
+
+                if (!matchesCurrentFolder) {
+                    applyFilters(); 
+                } else {
+                    renderTable(); 
+                }
+
+                updateKPIs();
+                updateFolderCounts();
+                if(activeUnit) updateUnitDashboard(activeUnit);
+            } else {
+                tr.style.opacity = '1';
+                showToast(`Failed to update Record #${displayNo}.`, "error");
+            }
+            
+            isSaving = false; 
+        }
 
         async function saveRecord(rowIdx, status, date, editor, unit, adminOverride = false) {
             if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
