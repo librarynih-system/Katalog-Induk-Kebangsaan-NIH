@@ -1558,40 +1558,47 @@
             }
         }
 
-        // FUNGSI DIKEMASKINI: Regex untuk menjadikan tag "error list:" kalis huruf besar/kecil dan highlight merah yang dinamik!
+        // FUNGSI DIKEMASKINI: Mengekstrak tag error dari JSON DAN Teks Biasa untuk SEMUA UNIT (UPK, UPMD, UPKK)
         function formatBahanColumn(text) {
             if(!text) return '-';
-            
             if (text.startsWith("'")) text = text.substring(1);
 
             let html = '';
-            const errorListRegex = /error list:\s*/i;
-            const hasErrorList = errorListRegex.test(text);
-            
             let errorTagsList = [];
+            let errorHtml = '';
 
-            if (hasErrorList) {
-                let errorHtml = '';
-                let jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            // Cari kawasan error list (kalis huruf besar/kecil)
+            const errBlockMatch = text.match(/error list:\s*([\s\S]*?)(?=LEADER|=LDR|LDR|$)/i);
+
+            if (errBlockMatch) {
+                let errText = errBlockMatch[1];
+                let jsonMatch = errText.match(/\[\s*\{[\s\S]*\}\s*\]/);
                 
+                // Cuba parse jika ia format JSON (seperti UPK)
                 if (jsonMatch) {
                     try {
                         let jsonStr = jsonMatch[0].replace(/&quot;/g, '"');
                         const errors = JSON.parse(jsonStr);
-                        
-                        // Ekstrak tag yang ada error secara dinamik!
                         errorTagsList = [...new Set(errors.map(e => (e.tag || '').substring(0,3)).filter(t => t.length === 3))];
-
                         errorHtml = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
                     } catch(e) {
                         console.log("JSON Parse Error", e);
                     }
                 }
                 
+                // Fallback: Ekstrak secara paksa sebarang 3-digit nombor dari teks error (untuk UPMD & UPKK)
+                let rawTags = errText.match(/(?:^|\b)(\d{3})(?=[^\d]|$)/g);
+                if (rawTags) {
+                    rawTags.forEach(t => errorTagsList.push(t.trim()));
+                }
+                errorTagsList = [...new Set(errorTagsList)]; // Buang duplicate
+                
+                // Jika bukan JSON, formatkan teks biasa supaya kelihatan cantik
                 if (!errorHtml) {
-                    let rawErrorMatch = text.match(/error list:\s*([\s\S]*?)(?=LEADER|=LDR|LDR|$)/i);
-                    let rawErrorText = rawErrorMatch ? rawErrorMatch[1].trim().replace(/</g, "&lt;").replace(/>/g, "&gt;") : "Error details could not be formatted.";
-                    errorHtml = `<span class="text-red-700 font-bold text-[11px]">${rawErrorText}</span>`;
+                    let cleanErrText = errText.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    // Tambahkan kotak merah pada tag di dalam teks ralat
+                    cleanErrText = cleanErrText.replace(/(^|\b)(\d{3}(\$[a-z0-9])?)\b/g, '<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">$2</span>');
+                    errorHtml = `<span class="text-red-700 font-bold text-[11px] block whitespace-pre-wrap">${cleanErrText}</span>`;
                 }
                 
                 html += `<div class="error-box mb-2 p-2.5 bg-red-50 border border-red-100 rounded-lg shadow-inner">${errorHtml}</div>`;
@@ -1608,14 +1615,14 @@
                 let snippet = marcText.length > 180 ? marcText.substring(0, 180) + '...' : marcText;
                 
                 if (errorTagsList.length > 0) {
-                    // Highlight dengan MERAH secara dinamik berdasarkan tag UPMD/UPK yang sebenar
-                    const tagRegex = new RegExp(`(^|\\b)(${errorTagsList.join('|')})\\b`, 'g');
+                    // Highlight baris MARC yang berkaitan menggunakan senarai tag yang diekstrak
+                    const tagRegex = new RegExp(`(^|\\s|=)(${errorTagsList.join('|')})(?=\\s|$)`, 'g');
                     snippet = snippet.replace(tagRegex, '$1<span class="bg-red-100 text-red-800 px-1 py-0.5 rounded border border-red-300 font-bold">$2</span>');
                 } else {
-                    // Highlight asas kalau format tidak dijumpai
+                    // Highlight default jika tiada tag ditemui
                     const errorTags = ['100', '110', '245', '650', '700'];
-                    const tagRegex = new RegExp(`\\b(${errorTags.join('|')})\\b`, 'g');
-                    snippet = snippet.replace(tagRegex, '<span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300 font-bold">$1</span>');
+                    const tagRegex = new RegExp(`(^|\\s|=)(${errorTags.join('|')})(?=\\s|$)`, 'g');
+                    snippet = snippet.replace(tagRegex, '$1<span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300 font-bold">$2</span>');
                 }
 
                 html += `<div class="text-[11px] text-slate-500 font-mono leading-relaxed line-clamp-3 bg-slate-50 p-2 rounded-lg border border-slate-100">${snippet}</div>`;
@@ -1630,6 +1637,7 @@
             return options.map(opt => `<option value="${opt}" ${cv === opt ? 'selected' : ''}>${opt}</option>`).join('');
         }
 
+        // FUNGSI DIKEMASKINI UNTUK MODAL (Paparan Penuh)
         function formatMARCForDisplay(text) {
             if (text.startsWith("'")) text = text.substring(1);
             
@@ -1637,22 +1645,38 @@
             let errorBoxHtml = '';
             let errorTagsList = [];
             
-            const errorListRegex = /Error list:\s*(\[[\s\S]*?\])?\s*/i;
-            let errorMatch = safeText.match(errorListRegex);
+            const errBlockMatch = safeText.match(/error list:\s*([\s\S]*?)(?=LEADER|=LDR|LDR|$)/i);
             
-            if (errorMatch) {
-                let jsonStr = errorMatch[1];
-                if (jsonStr) {
-                    try {
-                        const errors = JSON.parse(jsonStr.replace(/&quot;/g, '"'));
-                        
-                        errorTagsList = [...new Set(errors.map(e => (e.tag || '').substring(0,3)).filter(t => t.length === 3))];
+            if (errBlockMatch) {
+                let errText = errBlockMatch[1];
+                let jsonStrMatch = errText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                let errorDetails = '';
 
-                        let errorDetails = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
-                        errorBoxHtml = `<div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg shadow-inner block">${errorDetails}</div>`;
+                if (jsonStrMatch) {
+                    try {
+                        const errors = JSON.parse(jsonStrMatch[0].replace(/&quot;/g, '"'));
+                        errors.forEach(e => {
+                            let t = (e.tag || '').substring(0,3);
+                            if(t.length === 3) errorTagsList.push(t);
+                        });
+                        errorDetails = errors.map(e => `<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">${e.tag || 'Error'}</span> <span class="text-slate-800 font-bold text-[11px] ml-1">${e.description || JSON.stringify(e)}</span>`).join('<br>');
                     } catch(e) {}
                 }
-                safeText = safeText.replace(errorListRegex, '').trim();
+                
+                // Tambah sokongan pengekstrakan tag teks biasa (UPMD/UPKK)
+                let rawTags = errText.match(/(?:^|\b)(\d{3})(?=[^\d]|$)/g);
+                if (rawTags) {
+                    rawTags.forEach(t => errorTagsList.push(t.trim()));
+                }
+                errorTagsList = [...new Set(errorTagsList)];
+
+                if (!errorDetails) {
+                    errorDetails = errText.trim().replace(/(^|\b)(\d{3}(\$[a-z0-9])?)\b/g, '<span class="marc-tag text-[10px] bg-red-100 text-red-700 border-red-200 px-1.5 py-0.5 rounded shadow-sm">$2</span>');
+                }
+
+                errorBoxHtml = `<div class="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg shadow-inner block whitespace-pre-wrap">${errorDetails}</div>`;
+                
+                safeText = safeText.replace(/error list:\s*([\s\S]*?)(?=LEADER|=LDR|LDR|$)/i, '').trim();
             }
 
             let lines = safeText.split('\n');
