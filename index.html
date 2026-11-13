@@ -1381,6 +1381,23 @@
         }
 
         document.getElementById('btn-admin-panel').addEventListener('click', () => {
+            const sessionActive = sessionStorage.getItem('adminSessionActive');
+            const sessionTime = sessionStorage.getItem('adminSessionTime');
+            
+            if (sessionActive === 'true' && sessionTime) {
+                const now = new Date().getTime();
+                const twoHoursInMs = 2 * 60 * 60 * 1000;
+                
+                if (now - parseInt(sessionTime) < twoHoursInMs) {
+                    openModal('admin-modal');
+                    showToast("Sesi Admin masih aktif.", "success");
+                    return; 
+                } else {
+                    sessionStorage.removeItem('adminSessionActive');
+                    sessionStorage.removeItem('adminSessionTime');
+                }
+            }
+
             document.getElementById('admin-pin-input').value = '';
             openModal('pin-modal');
             setTimeout(() => document.getElementById('admin-pin-input').focus(), 10);
@@ -1411,6 +1428,9 @@
 
         function verifyPin() {
             if (document.getElementById('admin-pin-input').value === ADMIN_PIN) {
+                sessionStorage.setItem('adminSessionActive', 'true');
+                sessionStorage.setItem('adminSessionTime', new Date().getTime().toString());
+
                 closeModal('pin-modal');
                 setTimeout(() => openModal('admin-modal'), 300); 
             } else {
