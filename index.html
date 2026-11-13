@@ -320,7 +320,7 @@
                             <p class="text-xs text-slate-700 font-bold uppercase tracking-wider mt-2">Task Records</p>
                         </div>
                     </div>
-                    
+
                     <!-- Sub-Folder ITEM (Nested Inside UPKK) -->
                     <div onclick="event.stopPropagation(); showUnit('Item')" class="mt-2 bg-gradient-to-r from-orange-400 to-orange-500 rounded-xl p-0.5 shadow-md relative group/item hover:-translate-y-1 transition-transform z-20 cursor-pointer">
                         <div class="bg-white/95 backdrop-blur-sm rounded-[10px] p-3 flex items-center justify-between">
@@ -606,55 +606,76 @@
     </div>
 
     <div id="admin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col transform scale-95 transition-transform duration-300" id="admin-modal-content">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col transform scale-95 transition-transform duration-300" id="admin-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
                     <i data-lucide="shield-alert" class="w-5 h-5 text-emerald-600"></i> Administrator Panel
                 </h3>
                 <button onclick="closeModal('admin-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="p-6 flex flex-col gap-4">
-                <p class="text-sm text-slate-600 font-medium">This area is dedicated to system data management.</p>
+            <div class="p-6 flex flex-col gap-5 bg-slate-50/50 rounded-b-2xl">
+                <p class="text-sm text-slate-600 font-medium">This area is dedicated to system data configuration and management.</p>
                 
-                <!-- NEW BRANDING UPLOAD SECTION -->
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col gap-3 mt-1">
-                    <h4 class="font-bold text-navy text-sm flex items-center gap-2">
-                        <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Branding / Logo Upload
-                    </h4>
-                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Upload and manage your organisation's logo or dashboard branding (e.g., ministry or agency) for a customised look.</p>
-                    <button onclick="openBrandingModal()" class="mt-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm w-full">
-                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> BRANDING SETTINGS
-                    </button>
-                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Kumpulan Sync Data -->
+                    <div class="bg-blue-50/50 border border-blue-200/50 rounded-xl p-5 flex flex-col gap-3 h-full">
+                        <h4 class="font-bold text-navy text-sm flex items-center gap-2">
+                            <i data-lucide="folder-sync" class="w-5 h-5 text-blue-600"></i> Error Synchronization
+                        </h4>
+                        <p class="text-xs text-slate-500 leading-relaxed font-medium">The system will fetch new data from Google Drive directly to the bottom of the spreadsheet without deleting old records.</p>
+                        <button id="btn-import" class="mt-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                            <i data-lucide="hard-drive-download" class="w-5 h-5"></i> START IMPORT NOW
+                        </button>
+                    </div>
+                    
+                    <div class="bg-indigo-50/50 border border-indigo-200/50 rounded-xl p-5 flex flex-col gap-3 h-full">
+                        <h4 class="font-bold text-navy text-sm flex items-center gap-2">
+                            <i data-lucide="check-square" class="w-5 h-5 text-indigo-600"></i> Approved Records
+                        </h4>
+                        <p class="text-xs text-slate-500 leading-relaxed font-medium">Sistem akan menyemak fail yang dimuat naik dengan pangkalan data dan menukar status rekod yang berjaya kepada "Approve".</p>
+                        <button id="btn-import-approve" class="mt-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                            <i data-lucide="file-check-2" class="w-5 h-5"></i> VERIFY APPROVED RECORDS
+                        </button>
+                    </div>
 
-                <div class="bg-blue-50/50 border border-blue-200/50 rounded-xl p-5 flex flex-col gap-3 mt-1">
-                    <h4 class="font-bold text-navy text-sm flex items-center gap-2">
-                        <i data-lucide="folder-sync" class="w-5 h-5 text-blue-600"></i> Error Synchronization
-                    </h4>
-                    <p class="text-xs text-slate-500 leading-relaxed font-medium">The system will fetch new data from Google Drive directly to the bottom of the spreadsheet without deleting old records.</p>
-                    <button id="btn-import" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
-                        <i data-lucide="hard-drive-download" class="w-5 h-5"></i> START IMPORT NOW
-                    </button>
-                </div>
-                
-                <div class="bg-indigo-50/50 border border-indigo-200/50 rounded-xl p-5 flex flex-col gap-3 mt-1">
-                    <h4 class="font-bold text-navy text-sm flex items-center gap-2">
-                        <i data-lucide="check-square" class="w-5 h-5 text-indigo-600"></i> Approved Records Synchronization
-                    </h4>
-                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Sistem akan menyemak fail yang dimuat naik dengan pangkalan data dan menukar status rekod yang berjaya kepada "Approve".</p>
-                    <button id="btn-import-approve" class="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
-                        <i data-lucide="file-check-2" class="w-5 h-5"></i> VERIFY APPROVED RECORDS
-                    </button>
-                </div>
+                    <!-- Kumpulan Kawalan Khas -->
+                    <div class="bg-amber-50/50 border border-amber-200/50 rounded-xl p-5 flex flex-col gap-3 h-full">
+                        <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+                            <i data-lucide="unlock" class="w-5 h-5 text-amber-600"></i> Unlock Completed
+                        </h4>
+                        <p class="text-xs text-slate-500 leading-relaxed font-medium">Membenarkan Admin untuk mengubahsuai rekod yang telah pun berstatus "Complete" atau dikunci.</p>
+                        <button id="btn-admin-mode" class="mt-auto bg-amber-500 hover:bg-amber-600 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                            <i data-lucide="key" class="w-5 h-5"></i> ENABLE ADMIN EDIT MODE
+                        </button>
+                    </div>
 
-                <div class="bg-amber-50/50 border border-amber-200/50 rounded-xl p-5 flex flex-col gap-3 mt-2">
-                    <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
-                        <i data-lucide="unlock" class="w-5 h-5 text-amber-600"></i> Unlock Completed Records
-                    </h4>
-                    <p class="text-xs text-slate-500 leading-relaxed font-medium">Membenarkan Admin untuk mengubahsuai rekod yang telah pun berstatus "Complete" atau dikunci.</p>
-                    <button id="btn-admin-mode" class="mt-3 bg-amber-500 hover:bg-amber-600 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
-                        <i data-lucide="key" class="w-5 h-5"></i> ENABLE ADMIN EDIT MODE
-                    </button>
+                    <!-- Folder Karantina -->
+                    <div class="bg-rose-50/50 border border-rose-200/50 rounded-xl p-5 flex flex-col gap-3 h-full">
+                        <h4 class="font-bold text-rose-900 text-sm flex items-center gap-2">
+                            <i data-lucide="folder-search" class="w-5 h-5 text-rose-600"></i> Quarantine (Unassigned)
+                        </h4>
+                        <p class="text-xs text-slate-500 leading-relaxed font-medium">Semak rekod yang sistem gagal kenal pasti unitnya. Tersembunyi dari pandangan staf biasa.</p>
+                        <button onclick="closeModal('admin-modal'); showUnit('Quarantine')" class="mt-auto bg-rose-600 hover:bg-rose-700 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg w-full">
+                            <i data-lucide="eye" class="w-5 h-5"></i> VIEW UNASSIGNED RECORDS
+                        </button>
+                    </div>
+
+                    <!-- Seksyen Branding UI (Lebar Penuh) -->
+                    <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 h-full md:col-span-2 shadow-sm">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h4 class="font-bold text-navy text-sm flex items-center gap-2">
+                                    <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Branding / Logo Upload
+                                </h4>
+                                <p class="text-xs text-slate-500 leading-relaxed font-medium mt-1">Upload and manage your organisation's logo or dashboard branding (e.g., ministry or agency) for a customised look.</p>
+                            </div>
+                            <button onclick="openBrandingModal()" class="shrink-0 bg-slate-50 border border-slate-300 hover:bg-slate-100 text-slate-700 px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm">
+                                <i data-lucide="upload-cloud" class="w-4 h-4"></i> BRANDING SETTINGS
+                            </button>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -697,7 +718,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbybtT60FXpJ0CtNviq8Sum7Z8XTKlN4PYVZlC8CuWDLi1QhnV09ESE_pNH3Tn4jh5Do1A/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzXnQ1hYwy7oOEvMWfPViHuQv2tS4S2P_tWiaJsi8dJwYqqw0XmUb9smb86THsEybdg-g/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -949,6 +970,7 @@
                 const isFragment = !isValidRecord(r.Bahan);
                 if (isFragment) return false;
                 if (unitName === 'Item') return (r.Unit !== 'UPK' && r.Unit !== 'UPKK' && r.Unit !== 'UPMD');
+                if (unitName === 'Quarantine') return (!r.Unit || r.Unit === 'Auto Import' || r.Unit === 'Quarantine');
                 return r.Unit === unitName;
             });
 
@@ -1004,9 +1026,10 @@
             document.getElementById('count-upk').textContent = upk.toLocaleString();
             document.getElementById('count-upkk').textContent = upkk.toLocaleString();
             document.getElementById('count-upmd').textContent = upmd.toLocaleString();
-            document.getElementById('count-item').textContent = item.toLocaleString();
             document.getElementById('count-complete').textContent = comp.toLocaleString();
             
+            const countItemEl = document.getElementById('count-item');
+            if (countItemEl) countItemEl.textContent = item.toLocaleString();
             const subfolderCount = document.getElementById('subfolder-count-item');
             if(subfolderCount) subfolderCount.textContent = item.toLocaleString();
         }
@@ -1036,6 +1059,8 @@
                     matchUnit = (row.Status === 'Complete'); 
                 } else if (activeUnit === 'Item') {
                     matchUnit = !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                } else if (activeUnit === 'Quarantine') {
+                    matchUnit = !isFragment && (!row.Unit || row.Unit === 'Auto Import' || row.Unit === 'Quarantine');
                 } else {
                     matchUnit = !isFragment && (row.Unit === activeUnit);
                     
@@ -1080,6 +1105,7 @@
                 const isFragment = !isValidRecord(row.Bahan);
                 if (activeUnit === 'Complete') return (row.Status === 'Complete');
                 if (activeUnit === 'Item') return !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                if (activeUnit === 'Quarantine') return !isFragment && (!row.Unit || row.Unit === 'Auto Import' || row.Unit === 'Quarantine');
                 
                 let matchUnit = !isFragment && (row.Unit === activeUnit);
                 if (currentTab === 'tasks') {
@@ -1092,6 +1118,7 @@
 
             let baseTitle = '';
             if (activeUnit === 'Item') baseTitle = 'ITEM (New/Unassigned)';
+            else if (activeUnit === 'Quarantine') baseTitle = 'QUARANTINE (System Confused)';
             else if (activeUnit === 'Complete') baseTitle = 'COMPLETED ARCHIVE';
             else baseTitle = `Unit ${activeUnit}`;
             
