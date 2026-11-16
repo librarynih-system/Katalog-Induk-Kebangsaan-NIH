@@ -718,7 +718,7 @@
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzXnQ1hYwy7oOEvMWfPViHuQv2tS4S2P_tWiaJsi8dJwYqqw0XmUb9smb86THsEybdg-g/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxEIsfyS0up6waLDW2nALQntfZWxxim4Wgtt4mNSfdugp-IoPrNzvjWkOOg_XmvGk47LA/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -735,7 +735,7 @@
         let currentTab = 'tasks';
         let lastSaveTime = 0; 
         
-        const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD"];
+        const listUnits = ["Auto Import", "UPK", "UPKK", "UPMD", "ITEM"];
         
         const listEditors = [
             "Sistem", "Library admin", 
@@ -798,6 +798,7 @@
         function normalizeUnit(rawUnit) {
             if (!rawUnit) return 'Auto Import';
             let u = rawUnit.toString().trim().toUpperCase();
+            if (u === 'ITEM') return 'ITEM';
             if (u === 'UPKK' || u.includes('UPKK')) return 'UPKK';
             if (u === 'UPK' || (u.includes('UPK') && !u.includes('UPKK'))) return 'UPK';
             if (u === 'UPMD' || u.includes('UPMD')) return 'UPMD';
@@ -969,7 +970,7 @@
             let unitRecords = tableData.filter(r => {
                 const isFragment = !isValidRecord(r.Bahan);
                 if (isFragment) return false;
-                if (unitName === 'Item') return (r.Unit !== 'UPK' && r.Unit !== 'UPKK' && r.Unit !== 'UPMD');
+                if (unitName === 'Item') return r.Unit === 'ITEM';
                 if (unitName === 'Quarantine') return (!r.Unit || r.Unit === 'Auto Import' || r.Unit === 'Quarantine');
                 return r.Unit === unitName;
             });
@@ -1019,7 +1020,7 @@
                     if (u === 'UPK') upk++;
                     else if (u === 'UPKK') upkk++;
                     else if (u === 'UPMD') upmd++;
-                    else item++; 
+                    else if (u === 'ITEM') item++; 
                 }
             });
             
@@ -1058,7 +1059,7 @@
                 if (activeUnit === 'Complete') {
                     matchUnit = (row.Status === 'Complete'); 
                 } else if (activeUnit === 'Item') {
-                    matchUnit = !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                    matchUnit = !isFragment && (row.Unit === 'ITEM');
                 } else if (activeUnit === 'Quarantine') {
                     matchUnit = !isFragment && (!row.Unit || row.Unit === 'Auto Import' || row.Unit === 'Quarantine');
                 } else {
@@ -1104,7 +1105,7 @@
             let folderTotal = tableData.filter(row => {
                 const isFragment = !isValidRecord(row.Bahan);
                 if (activeUnit === 'Complete') return (row.Status === 'Complete');
-                if (activeUnit === 'Item') return !isFragment && (row.Unit !== 'UPK' && row.Unit !== 'UPKK' && row.Unit !== 'UPMD');
+                if (activeUnit === 'Item') return !isFragment && (row.Unit === 'ITEM');
                 if (activeUnit === 'Quarantine') return !isFragment && (!row.Unit || row.Unit === 'Auto Import' || row.Unit === 'Quarantine');
                 
                 let matchUnit = !isFragment && (row.Unit === activeUnit);
@@ -1329,7 +1330,7 @@
                 if (activeUnit === 'Complete') {
                     matchesCurrentFolder = (record.Status === 'Complete');
                 } else if (activeUnit === 'Item') {
-                    matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit !== 'UPK' && record.Unit !== 'UPKK' && record.Unit !== 'UPMD');
+                    matchesCurrentFolder = (record.Status !== 'Complete' && record.Unit === 'ITEM');
                 } else {
                     matchesCurrentFolder = (record.Unit === activeUnit);
                     if (currentTab === 'tasks') {
