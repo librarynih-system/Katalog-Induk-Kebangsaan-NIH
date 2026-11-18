@@ -689,39 +689,33 @@
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col transform scale-95 transition-transform duration-300" id="branding-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
-                    <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Upload Branding & Logos
+                    <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Branding & Logos
                 </h3>
                 <button onclick="closeModal('branding-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="p-6 flex flex-col gap-6">
-                <!-- Upload Logo 1 -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm text-slate-800 font-bold">1. Logo Utama (Jata Negara / Kiri Header)</label>
-                    <p class="text-xs text-slate-500 font-medium mb-1">Gantikan logo Jata Negara sedia ada dengan logo rasmi pilihan anda.</p>
-                    <div class="flex items-center gap-4">
-                        <input type="file" id="upload-logo-utama" accept="image/*" onchange="processUpload(event, 'logo-utama', 'kik_logo_utama', false)" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full">
-                    </div>
+            <div class="p-6 flex flex-col gap-6 text-center">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="database-zap" class="w-8 h-8"></i>
                 </div>
-                
-                <hr class="border-slate-100">
-
-                <!-- Upload Background Dashboard -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm text-slate-800 font-bold">2. Gambar Latar Belakang Dashboard (Full Background)</label>
-                    <p class="text-xs text-slate-500 font-medium mb-1">Muat naik gambar untuk dijadikan corak latar belakang penuh pada keseluruhan sistem.</p>
-                    <div class="flex items-center gap-4">
-                        <input type="file" id="upload-logo-kedua" accept="image/*" onchange="processUpload(event, 'full-page-bg', 'kik_header_bg', true)" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer w-full">
-                    </div>
+                <h4 class="text-lg font-bold text-slate-800">Urusan Tema Melalui Google Sheet</h4>
+                <p class="text-sm text-slate-600 leading-relaxed font-medium">
+                    Sistem ini kini dihubungkan secara terus (Live) ke pangkalan data. Untuk menukar <b>Logo Utama</b> atau <b>Gambar Latar Belakang</b>, sila buka pangkalan data Google Sheet anda dan pergi ke tab <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-bold">Tetapan</span>.
+                </p>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left mt-2">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Panduan Format (Tab Tetapan):</p>
+                    <ul class="text-xs text-slate-700 font-mono space-y-3">
+                        <li><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border">Kolum A:</span> Logo Utama <br><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border mt-1 inline-block">Kolum B:</span> https://link-gambar.com/logo.png</li>
+                        <li><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border">Kolum A:</span> Background <br><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border mt-1 inline-block">Kolum B:</span> https://link-gambar.com/bg.jpg</li>
+                    </ul>
                 </div>
-                
-                <button onclick="resetLogos()" class="mt-4 text-xs font-bold text-red-600 hover:text-red-800 underline text-center w-full">Reset to Default Branding</button>
+                <button onclick="closeModal('branding-modal')" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors w-full shadow-md">Tutup Maklumat Ini</button>
             </div>
         </div>
     </div>
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz2guI9yR-dGyU-cstK-gJTBcw_h34cZ0gyRJxrVPApjEb7lwhUioQ_uNwyfDHzGbGx8A/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyQ9-1SkRBS28ufFY2mRJ8bDcG0U1P1_NQYwsSxTBDWjpTXZlt_ley2i7n2bhE9B53pUA/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -829,7 +823,6 @@
         }
 
         async function init() {
-            loadSavedLogos();
             updateTimestamp();
             try {
                 if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
@@ -839,6 +832,11 @@
                     const resJson = await response.json();
                     if(resJson.status === 'success') {
                         tableData = resJson.data.map(mapIncomingRecord);
+                        
+                        // Apply settings (Logo/Background) dari Google Sheet
+                        if(resJson.settings) {
+                            applySettings(resJson.settings);
+                        }
                     } else throw new Error(resJson.message);
                 }
                 
@@ -1551,53 +1549,26 @@
             setTimeout(() => openModal('branding-modal'), 300);
         }
 
-        function processUpload(event, imgId, storageKey, isBackground = false) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const base64Str = e.target.result;
-                    localStorage.setItem(storageKey, base64Str);
-                    const imgEl = document.getElementById(imgId);
-                    imgEl.src = base64Str;
-                    imgEl.classList.remove('hidden');
-                    
-                    const msg = isBackground ? "Background dashboard successfully uploaded!" : "Logo successfully uploaded!";
-                    showToast(msg, "success");
-                };
-                reader.readAsDataURL(file);
+        function applySettings(settings) {
+            if (!settings) return;
+            
+            // Tukar Logo Utama
+            if (settings['Logo Utama']) {
+                const logoEl = document.getElementById('logo-utama');
+                if(logoEl) logoEl.src = settings['Logo Utama'];
             }
-        }
-
-        function loadSavedLogos() {
-            try {
-                const savedLogoUtama = localStorage.getItem('kik_logo_utama');
-                if(savedLogoUtama) {
-                    document.getElementById('logo-utama').src = savedLogoUtama;
-                }
-                
-                const savedBg = localStorage.getItem('kik_header_bg');
-                if(savedBg) {
-                    const bgEl = document.getElementById('full-page-bg');
-                    bgEl.src = savedBg;
-                    bgEl.classList.remove('hidden');
-                }
-            } catch(e) {}
-        }
-
-        function resetLogos() {
-            localStorage.removeItem('kik_logo_utama');
-            localStorage.removeItem('kik_header_bg');
-            document.getElementById('logo-utama').src = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Coat_of_arms_of_Malaysia.svg/800px-Coat_of_arms_of_Malaysia.svg.png";
             
+            // Tukar Background
             const bgEl = document.getElementById('full-page-bg');
-            bgEl.src = "";
-            bgEl.classList.add('hidden');
-            
-            document.getElementById('upload-logo-utama').value = '';
-            document.getElementById('upload-logo-kedua').value = '';
-            
-            showToast("Branding reset to default.", "success");
+            if (bgEl) {
+                if (settings['Background']) {
+                    bgEl.src = settings['Background'];
+                    bgEl.classList.remove('hidden');
+                } else {
+                    bgEl.src = "";
+                    bgEl.classList.add('hidden');
+                }
+            }
         }
 
         function unlockEditor(tdElement) {
