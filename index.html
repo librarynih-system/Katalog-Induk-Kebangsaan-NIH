@@ -684,38 +684,42 @@
         </div>
     </div>
 
-    <!-- Modals Tambahan: Branding Modal -->
+    <!-- Modals Tambahan: Branding Modal (LIVE SYNC UPLOAD) -->
     <div id="branding-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center transition-opacity opacity-0 p-4 font-sans">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col transform scale-95 transition-transform duration-300" id="branding-modal-content">
             <div class="px-6 py-4 border-b border-bordergrey flex justify-between items-center bg-slate-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-navy flex items-center gap-2">
-                    <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Branding & Logos
+                    <i data-lucide="image-plus" class="w-5 h-5 text-indigo-600"></i> Upload Branding & Logos (Live Sync)
                 </h3>
                 <button onclick="closeModal('branding-modal')" class="text-slate-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="p-6 flex flex-col gap-6 text-center">
-                <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="database-zap" class="w-8 h-8"></i>
+            <div class="p-6 flex flex-col gap-6">
+                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl mb-2">
+                    <p class="text-xs text-indigo-800 font-medium leading-relaxed">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Gambar yang dimuat naik akan disimpan secara automatik ke dalam Google Drive dan pautannya (URL) akan direkodkan ke tab <b>"Tetapan"</b> di Google Sheet. Semua staf akan terus melihat perubahan ini.
+                    </p>
                 </div>
-                <h4 class="text-lg font-bold text-slate-800">Urusan Tema Melalui Google Sheet</h4>
-                <p class="text-sm text-slate-600 leading-relaxed font-medium">
-                    Sistem ini kini dihubungkan secara terus (Live) ke pangkalan data. Untuk menukar <b>Logo Utama</b> atau <b>Gambar Latar Belakang</b>, sila buka pangkalan data Google Sheet anda dan pergi ke tab <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-bold">Tetapan</span>.
-                </p>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left mt-2">
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Panduan Format (Tab Tetapan):</p>
-                    <ul class="text-xs text-slate-700 font-mono space-y-3">
-                        <li><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border">Kolum A:</span> Logo Utama <br><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border mt-1 inline-block">Kolum B:</span> https://link-gambar.com/logo.png</li>
-                        <li><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border">Kolum A:</span> Background <br><span class="font-bold text-slate-900 bg-white px-1 py-0.5 rounded border mt-1 inline-block">Kolum B:</span> https://link-gambar.com/bg.jpg</li>
-                    </ul>
+
+                <!-- Upload Logo 1 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm text-slate-800 font-bold">1. Logo Utama (Jata Negara / Kiri Header)</label>
+                    <input type="file" id="upload-logo-utama" accept="image/*" onchange="uploadBranding(event, 'logo')" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full">
                 </div>
-                <button onclick="closeModal('branding-modal')" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors w-full shadow-md">Tutup Maklumat Ini</button>
+                
+                <hr class="border-slate-100">
+
+                <!-- Upload Background Dashboard -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm text-slate-800 font-bold">2. Gambar Latar Belakang (Full Background)</label>
+                    <input type="file" id="upload-logo-kedua" accept="image/*" onchange="uploadBranding(event, 'background')" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer w-full">
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Application Script -->
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyQ9-1SkRBS28ufFY2mRJ8bDcG0U1P1_NQYwsSxTBDWjpTXZlt_ley2i7n2bhE9B53pUA/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwaJWbPpkKTj8ZPSissiS9dzALJl8d5uoH9zItIFknAqTK0YDIgxIA7fCjQ7ZbO_PIxBw/exec"; 
         const ADMIN_PIN = "kik2026"; 
 
         let tableData = [];
@@ -1547,6 +1551,53 @@
         function openBrandingModal() {
             closeModal('admin-modal');
             setTimeout(() => openModal('branding-modal'), 300);
+        }
+
+        // FUNGSI UPLOAD GAMBAR KE GOOGLE DRIVE & GOOGLE SHEET (LIVE SYNC)
+        function uploadBranding(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast("Memuat naik gambar ke Google Drive... Sila tunggu.", "success", true);
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                // Buang header base64 (e.g. data:image/png;base64,) untuk hantar data tulen
+                const base64Data = e.target.result.split(',')[1];
+                
+                try {
+                    const response = await fetch(GAS_WEB_APP_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'upload_branding',
+                            type: type,
+                            filename: file.name,
+                            mimeType: file.type,
+                            base64Data: base64Data
+                        })
+                    });
+                    
+                    const resJson = await response.json();
+                    if(resJson.status === 'success') {
+                        showToast(resJson.message, "success", true);
+                        
+                        // Tarik (Refresh) Data untuk dapatkan URL baru dari tab 'Tetapan'
+                        const refreshRes = await fetch(GAS_WEB_APP_URL);
+                        const refreshJson = await refreshRes.json();
+                        if(refreshJson.status === 'success' && refreshJson.settings) {
+                            applySettings(refreshJson.settings);
+                        }
+                    } else {
+                        showToast("Gagal memuat naik: " + resJson.message, "error", true);
+                    }
+                } catch(error) {
+                    showToast("Ralat sistem: " + error, "error", true);
+                } finally {
+                    event.target.value = ''; 
+                    closeModal('branding-modal');
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         function applySettings(settings) {
