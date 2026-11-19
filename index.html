@@ -187,6 +187,31 @@
             <div class="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
         </header>
 
+        <!-- SEKATAN SKRIP SEGERA (0-SAAT DELAY CACHE PINTAR) -->
+        <script>
+            // Skrip ini diletakkan di sini supaya ia berjalan secara berturut-turut (synchronous)
+            // Ia akan menampal gambar SEBELUM browser sempat melukis skrin putih. FOUC dihilangkan 100%.
+            (function() {
+                try {
+                    const cached = localStorage.getItem('kik_settings_cache');
+                    if (cached) {
+                        const settings = JSON.parse(cached);
+                        if (settings['Logo Utama']) {
+                            const logoEl = document.getElementById('logo-utama');
+                            if (logoEl) logoEl.src = settings['Logo Utama'];
+                        }
+                        if (settings['Background']) {
+                            const bgEl = document.getElementById('full-page-bg');
+                            if (bgEl) {
+                                bgEl.src = settings['Background'];
+                                bgEl.classList.remove('hidden');
+                            }
+                        }
+                    }
+                } catch (e) {}
+            })();
+        </script>
+
         <!-- PANDANGAN MUKA DEPAN (DASHBOARD) -->
         <div id="dashboard-view" class="flex flex-col gap-8 fade-in">
             
@@ -826,20 +851,7 @@
             };
         }
 
-        // FUNGSI CACHE PINTAR (Paparan Segera 0 Saat)
-        function loadCachedSettings() {
-            try {
-                const cached = localStorage.getItem('kik_settings_cache');
-                if (cached) {
-                    applySettings(JSON.parse(cached), true); // true = dipanggil dari cache
-                }
-            } catch (e) {}
-        }
-
         async function init() {
-            // Panggil memori cache supaya tema korporat terpampang serta-merta!
-            loadCachedSettings(); 
-
             updateTimestamp();
             try {
                 if(GAS_WEB_APP_URL === "PASTE_WEB_APP_URL_HERE") {
